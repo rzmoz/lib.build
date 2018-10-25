@@ -1,0 +1,1 @@
+Robocopy $PSScriptRoot "$([Environment]::GetFolderPath("MyDocuments"))\WindowsPowerShell\Modules\lib.build" *.psd1 *.psm1
