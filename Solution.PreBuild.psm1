@@ -33,6 +33,10 @@ Function Invoke-Solution.PreBuild {
     }
 
     End {
-        Write-Host "Solution.PreBuild finished" -ForegroundColor Gray -BackgroundColor Black
+        Write-Host "Solution.PreBuild finished with $LASTEXITCODE" -ForegroundColor Gray -BackgroundColor Black
+        
+        if ($LASTEXITCODE -ne 0) {
+            EXIT $LASTEXITCODE
+        }
     }
 }

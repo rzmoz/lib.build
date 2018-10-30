@@ -10,7 +10,7 @@ Function Invoke-Project.PublishReleaseArtifacts {
     )
 
     Begin {
-        Write-Host "Project.PublishReleaseArtifacts started" -ForegroundColor Gray -BackgroundColor Black
+        Write-Host "Project.PublishReleaseArtifacts for $($projectFilePath.Name) started" -ForegroundColor Gray -BackgroundColor Black
         $ErrorActionPreference = "Stop"
     }
 
@@ -36,11 +36,12 @@ Function Invoke-Project.PublishReleaseArtifacts {
         }
 
         Write-Host "Copying release artifacts for $($projectFilePath.FullName)"
-        Robocopy "$projectTargetDir" "$releaseArtifactsTargetDir"  /E /NS /NC /NFL /NDL | Write-Host -ForegroundColor DarkGray
+        $copyOutput = Robocopy "$projectTargetDir" "$releaseArtifactsTargetDir"  /E /NS /NC /NFL /NDL
+        Write-Host $copyOutput -ForegroundColor DarkGray
 
         if ($targetFrameworkIsDotNetFramework) {
-            Robocopy "$projectTargetDir" "$releaseArtifactsTargetDir/bin" *.dll  /NS /NC /NFL /NDL | Write-Host -ForegroundColor DarkGray
-            Robocopy "$projectTargetDir" "$releaseArtifactsTargetDir/bin" *.pdb  /NS /NC /NFL /NDL | Write-Host -ForegroundColor DarkGray
+            Robocopy "$projectTargetDir" "$releaseArtifactsTargetDir/bin" *.dll  /NS /NC /NFL /NDL
+            Robocopy "$projectTargetDir" "$releaseArtifactsTargetDir/bin" *.pdb  /NS /NC /NFL /NDL
             Remove-Item "$releaseArtifactsTargetDir\*.dll"
             Remove-Item "$releaseArtifactsTargetDir\*.pdb"        
         }
@@ -50,11 +51,11 @@ Function Invoke-Project.PublishReleaseArtifacts {
         Write-Host "Project.PublishReleaseArtifacts finished" -ForegroundColor Gray -BackgroundColor Black
 
         #Robocopy exit code
-        if ($lastExitCode -lt 8) {
-            $lastExitCode = 0 #ok
+        if ($LASTEXITCODE -lt 8) {
+            $LASTEXITCODE = 0 #ok            
         }
         else {
-            Exit 1
+            EXIT $LASTEXITCODE
         }
     }
 }

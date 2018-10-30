@@ -21,10 +21,19 @@ Function Invoke-Solution.PostBuild {
         
         $releaseProjects | ForEach-Object {
             Invoke-Project.PublishReleaseArtifacts -projectFilePath $_.FullName -configuration $configuration -releaseArtifactsDir $releaseArtifactsDir
-        }        
+        }
     }
 
-    End {
-        Write-Host "Solution.PostBuild finished" -ForegroundColor Gray -BackgroundColor Black
+    End {        
+        #Robocopy exit code
+        if ($LASTEXITCODE -lt 8) {
+            $LASTEXITCODE = 0 #ok            
+        }
+
+        Write-Host "Solution.PostBuild finished with $LASTEXITCODE" -ForegroundColor Gray -BackgroundColor Black        
+        
+        if ($LASTEXITCODE -ne 0) {
+            EXIT $LASTEXITCODE
+        }
     }
 }

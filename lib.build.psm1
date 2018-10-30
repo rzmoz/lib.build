@@ -10,11 +10,11 @@ Function New-Lib.Build {
 
     Begin {
         $ErrorActionPreference = "Stop"        
+        $LASTEXITCODE=0
 
         $slnDir = Resolve-Path $solutionDir
         Write-Host "Lib.Build starting in $slnDir..." -ForegroundColor Gray -BackgroundColor Black
         $releaseArtifactsDir = [System.IO.Path]::Combine($slnDir, ".releaseArtifacts").TrimEnd('\')
-
         Write-Host "Scanning for sln file in $slnDir"  -ForegroundColor DarkGray
         $slnPath = Get-ChildItem $slnDir -Filter "*.sln"
 
@@ -51,7 +51,7 @@ Function New-Lib.Build {
         $testProjects | ForEach-Object {
             Write-Host $_.FullName -ForegroundColor DarkGray
         }
-
+        
         Import-Module "$PSScriptRoot\Solution.PreBuild.psm1" -Force
         Invoke-Solution.PreBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
         
@@ -59,10 +59,14 @@ Function New-Lib.Build {
         Invoke-Solution.Build -slnPath $slnPath.FullName -configuration $configuration
 
         Import-Module "$PSScriptRoot\Solution.PostBuild.psm1" -Force
-        Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration
+        Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration        
     }
 
     End {
-        Write-Host "Lib.Build finished" -ForegroundColor Gray -BackgroundColor Black        
+        $color = [System.ConsoleColor]::Green
+        if($LASTEXITCODE -ne 0){
+            $color = [System.ConsoleColor]::DarkRed
+        }
+        Write-Host "Lib.Build finished with $LASTEXITCODE" -ForegroundColor $color -BackgroundColor Black        
     }
 }
