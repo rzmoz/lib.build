@@ -21,6 +21,9 @@ Function Invoke-Solution.PostBuild {
         
         $releaseProjects | ForEach-Object {
             Invoke-Project.PublishReleaseArtifacts -projectFilePath $_.FullName -configuration $configuration -releaseArtifactsDir $releaseArtifactsDir
+            if ($global:lastexitcode -ne 0) {
+                RETURN
+            }
         }
     }
 
@@ -29,11 +32,7 @@ Function Invoke-Solution.PostBuild {
         if ($LASTEXITCODE -lt 8) {
             $LASTEXITCODE = 0 #ok            
         }
-
-        Write-Host "Solution.PostBuild finished with $LASTEXITCODE" -ForegroundColor Gray -BackgroundColor Black        
-        
-        if ($LASTEXITCODE -ne 0) {
-            EXIT $LASTEXITCODE
-        }
+        $global:lastexitcode = $LASTEXITCODE
+        Write-Host "Solution.PostBuild finished with $LASTEXITCODE" -ForegroundColor Gray -BackgroundColor Black
     }
 }

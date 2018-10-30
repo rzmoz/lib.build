@@ -48,14 +48,12 @@ Function Invoke-Project.PublishReleaseArtifacts {
     }
 
     End {
-        Write-Host "Project.PublishReleaseArtifacts finished" -ForegroundColor Gray -BackgroundColor Black
+        Write-Host "Project.PublishReleaseArtifacts for $($projectFilePath.Name) finished" -ForegroundColor Gray -BackgroundColor Black
 
         #Robocopy exit code
         if ($LASTEXITCODE -lt 8) {
             $LASTEXITCODE = 0 #ok            
         }
-        else {
-            EXIT $LASTEXITCODE
-        }
+        $global:lastexitcode = $LASTEXITCODE
     }
 }

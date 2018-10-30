@@ -9,8 +9,8 @@ Function New-Lib.Build {
     )
 
     Begin {
-        $ErrorActionPreference = "Stop"        
-        $LASTEXITCODE=0
+        $ErrorActionPreference = "Stop"
+        $global:lastexitcode = 0
 
         $slnDir = Resolve-Path $solutionDir
         Write-Host "Lib.Build starting in $slnDir..." -ForegroundColor Gray -BackgroundColor Black
@@ -36,7 +36,7 @@ Function New-Lib.Build {
 
         $testProjects | ForEach-Object {
             for ($i = 0; $i -lt $releaseProjects.Count; $i++) {
-                if($releaseProjects[$i].FullName -eq $_.FullName){
+                if ($releaseProjects[$i].FullName -eq $_.FullName) {
                     $releaseProjects.RemoveAt($i)
                     break
                 }
@@ -52,21 +52,25 @@ Function New-Lib.Build {
             Write-Host $_.FullName -ForegroundColor DarkGray
         }
         
-        Import-Module "$PSScriptRoot\Solution.PreBuild.psm1" -Force
-        Invoke-Solution.PreBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
-        
-        Import-Module "$PSScriptRoot\Solution.Build.psm1" -Force
-        Invoke-Solution.Build -slnPath $slnPath.FullName -configuration $configuration
-
-        Import-Module "$PSScriptRoot\Solution.PostBuild.psm1" -Force
-        Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration        
+        if ($global:lastexitcode -eq 0) {
+            Import-Module "$PSScriptRoot\Solution.PreBuild.psm1" -Force
+            Invoke-Solution.PreBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
+        }
+        if ($global:lastexitcode -eq 0) {
+            Import-Module "$PSScriptRoot\Solution.Build.psm1" -Force
+            Invoke-Solution.Build -slnPath $slnPath.FullName -configuration $configuration
+        }
+        if ($global:lastexitcode -eq 0) {
+            Import-Module "$PSScriptRoot\Solution.PostBuild.psm1" -Force
+            Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration                
+        }
     }
 
     End {
         $color = [System.ConsoleColor]::Green
-        if($LASTEXITCODE -ne 0){
+        if ($global:lastexitcode -ne 0) {
             $color = [System.ConsoleColor]::DarkRed
         }
-        Write-Host "Lib.Build finished with $LASTEXITCODE" -ForegroundColor $color -BackgroundColor Black        
+        Write-Host "Lib.Build finished with $LASTEXITCODE" -ForegroundColor $color -BackgroundColor Black
     }
 }

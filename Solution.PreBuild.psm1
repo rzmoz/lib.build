@@ -20,7 +20,7 @@ Function Invoke-Solution.PreBuild {
     Process {
         Write-Host "Cleaning: $releaseArtifactsDir"    
         Remove-Item "$($releaseArtifactsDir)/*" -recurse -force -ErrorAction Ignore
-        $lastExitCode = 0#reset error code if any
+        $lastExitCode = 0 #reset error code if any
         
         New-Item $releaseArtifactsDir -ItemType Directory -Force | Out-Null
 
@@ -34,9 +34,6 @@ Function Invoke-Solution.PreBuild {
 
     End {
         Write-Host "Solution.PreBuild finished with $LASTEXITCODE" -ForegroundColor Gray -BackgroundColor Black
-        
-        if ($LASTEXITCODE -ne 0) {
-            EXIT $LASTEXITCODE
-        }
+        $global:lastexitcode = $LASTEXITCODE
     }
 }

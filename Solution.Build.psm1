@@ -28,9 +28,6 @@ Function Invoke-Solution.Build
 
     End {
         Write-Host "Solution.Build finished with $LASTEXITCODE" -ForegroundColor Gray -BackgroundColor Black
-
-        if ($LASTEXITCODE -ne 0) {
-            EXIT $LASTEXITCODE
-        }
+        $global:lastexitcode = $LASTEXITCODE        
     }
 }
