@@ -1,4 +1,4 @@
-Function New-DotNet.Build {
+Function New-Lib.Build {
     [CmdletBinding()]
     Param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -9,7 +9,8 @@ Function New-DotNet.Build {
     )
 
     Begin {
-        $ErrorActionPreference = "Stop"
+        $ErrorActionPreference = "Stop"        
+
         $slnDir = Resolve-Path $solutionDir
         Write-Host "Lib.Build starting in $slnDir..." -ForegroundColor Gray -BackgroundColor Black
         $releaseArtifactsDir = [System.IO.Path]::Combine($slnDir, ".releaseArtifacts").TrimEnd('\')
@@ -52,13 +53,13 @@ Function New-DotNet.Build {
         }
 
         Import-Module "$PSScriptRoot\Solution.PreBuild.psm1" -Force
-        #Invoke-Solution.PreBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
+        Invoke-Solution.PreBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
         
         Import-Module "$PSScriptRoot\Solution.Build.psm1" -Force
-        #Invoke-Solution.Build -slnPath $slnPath.FullName -configuration $configuration
+        Invoke-Solution.Build -slnPath $slnPath.FullName -configuration $configuration
 
         Import-Module "$PSScriptRoot\Solution.PostBuild.psm1" -Force
-        #Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration
+        Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration
     }
 
     End {
