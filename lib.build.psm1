@@ -1,4 +1,4 @@
-Function New-Lib.Build {
+Function New-Build {
     [CmdletBinding()]
     Param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -11,9 +11,9 @@ Function New-Lib.Build {
     Begin {
         $ErrorActionPreference = "Stop"
         $global:lastexitcode = 0
+        Write-Host "$($MyInvocation.MyCommand.Name) started with $global:lastExitCode" -ForegroundColor Gray -BackgroundColor DarkCyan
 
         $slnDir = Resolve-Path $solutionDir
-        Write-Host "Lib.Build starting in $slnDir..." -ForegroundColor Gray -BackgroundColor Black
         $releaseArtifactsDir = [System.IO.Path]::Combine($slnDir, ".releaseArtifacts").TrimEnd('\')
         Write-Host "Scanning for sln file in $slnDir"  -ForegroundColor DarkGray
         $slnPath = Get-ChildItem $slnDir -Filter "*.sln"
@@ -24,7 +24,7 @@ Function New-Lib.Build {
         }
 
         if ($slnPath.GetType().FullName -ne "System.IO.FileInfo") {
-            Write-Host "More than one solution file  found in: $slnDir. Aborting..." -ForegroundColor DarkRed -BackgroundColor Black
+            Write-Host "More than one solution file found in: $slnDir. Aborting..." -ForegroundColor DarkRed -BackgroundColor Black
             Exit 1
         }
 
@@ -53,24 +53,17 @@ Function New-Lib.Build {
         }
         
         if ($global:lastexitcode -eq 0) {
-            Import-Module "$PSScriptRoot\Solution.PreBuild.psm1" -Force
-            Invoke-Solution.PreBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
-        }
-        if ($global:lastexitcode -eq 0) {
-            Import-Module "$PSScriptRoot\Solution.Build.psm1" -Force
-            Invoke-Solution.Build -slnPath $slnPath.FullName -configuration $configuration
-        }
-        if ($global:lastexitcode -eq 0) {
-            Import-Module "$PSScriptRoot\Solution.PostBuild.psm1" -Force
-            Invoke-Solution.PostBuild -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration                
+            & "$PSScriptRoot\Solution.PreBuild.ps1" -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir
+        
+            if ($global:lastexitcode -eq 0) {
+                & "$PSScriptRoot\Solution.Build.ps1" -slnPath $slnPath.FullName -configuration $configuration
+            }
+            if ($global:lastexitcode -eq 0) {
+                & "$PSScriptRoot\Solution.PostBuild.ps1" -slnDir $slnDir -releaseArtifactsDir $releaseArtifactsDir -releaseProjects $releaseProjects -configuration $configuration                
+            }
         }
     }
-
-    End {
-        $color = [System.ConsoleColor]::Green
-        if ($global:lastexitcode -ne 0) {
-            $color = [System.ConsoleColor]::DarkRed
-        }
-        Write-Host "Lib.Build finished with $LASTEXITCODE" -ForegroundColor $color -BackgroundColor Black
+    End {        
+        Write-Host "$($MyInvocation.MyCommand.Name) finished with $global:lastExitCode" -ForegroundColor Gray -BackgroundColor DarkCyan
     }
 }
