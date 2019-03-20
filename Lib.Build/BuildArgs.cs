@@ -17,6 +17,8 @@ namespace Lib.Build
             {"slnDir", nameof(SolutionDir) },
             {"ps1",nameof(Ps1CallbackRootDir) },
             {"ps1Dir", nameof(Ps1CallbackRootDir) },
+            {"releaseFilter", nameof(ReleaseProjectFilter) },
+            {"testFilter", nameof(TestProjectFilter) },
         };
 
         public BuildArgs(string[] args)
@@ -31,7 +33,13 @@ namespace Lib.Build
         public DirPath Ps1CallbackRootDir => _cliArgs[nameof(Ps1CallbackRootDir)]?.ToDir();
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
 
+        public string ReleaseProjectFilter { get; set; } = "*.csproj";
+        public string TestProjectFilter { get; set; } = "*.tests.csproj";
+
         public bool IsDebug => _cliArgs.IsDebug;
+
+        public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
+        public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();
 
         public IReadOnlyList<FilePath> PreBuildCallbacks { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> BuildCallbacks { get; set; } = new List<FilePath>();

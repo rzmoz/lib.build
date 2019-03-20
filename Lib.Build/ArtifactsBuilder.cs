@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using DotNet.Basics.IO;
 using Serilog;
@@ -32,10 +33,35 @@ namespace Lib.Build
             Log.Debug($"{nameof(_args.ArtifactsDir)}: {_args.ArtifactsDir?.FullName()}");
             Log.Debug($"{nameof(_args.Ps1CallbackRootDir)}: {_args.Ps1CallbackRootDir?.FullName()}");
 
+            ResolveProjects();
             ResolvePs1Callbacks();
-            
+
         }
 
+        private void ResolveProjects()
+        {
+            Log.Information($"Resolving Projects");
+            var releaseProjects = _args.SolutionDir.EnumerateFiles(_args.ReleaseProjectFilter, SearchOption.AllDirectories).ToList();
+            _args.TestProjects = _args.SolutionDir.EnumerateFiles(_args.TestProjectFilter, SearchOption.AllDirectories).ToList();
+
+
+            foreach (var testProject in _args.TestProjects)
+            {
+                Log.Debug($"Test project found: {testProject.FullName()}");
+                for (var i = 0; i < releaseProjects.Count; i++)
+                {
+                    if (releaseProjects[i].FullName().Equals(testProject.FullName()))
+                    {
+                        releaseProjects.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+            _args.ReleaseProjects = releaseProjects;
+
+            foreach (var releaseProject in _args.ReleaseProjects)
+                Log.Debug($"Release project found: {releaseProject.FullName()}");
+        }
         private void ResolvePs1Callbacks()
         {
             Log.Information($"Resolving Ps1 callbacks");

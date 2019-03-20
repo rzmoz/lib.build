@@ -29,7 +29,7 @@ namespace Lib.Build
 
         private Task CleanDir(DirPath dir)
         {
-            Log.Information($"Cleaning {{Dir}}", dir.FullName());
+            Log.Debug($"Cleaning {{Dir}}", dir.FullName());
 
             if (dir.Exists() == false)
                 throw new DirectoryNotFoundException(dir.FullName());
