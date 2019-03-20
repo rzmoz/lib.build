@@ -1,4 +1,5 @@
-﻿using DotNet.Basics.Cli;
+﻿using System.Collections.Generic;
+using DotNet.Basics.Cli;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
 
@@ -31,5 +32,9 @@ namespace Lib.Build
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
 
         public bool IsDebug => _cliArgs.IsDebug;
+
+        public IReadOnlyList<FilePath> PreBuildCallbacks { get; set; } = new List<FilePath>();
+        public IReadOnlyList<FilePath> BuildCallbacks { get; set; } = new List<FilePath>();
+        public IReadOnlyList<FilePath> PostBuildCallbacks { get; set; } = new List<FilePath>();
     }
 }

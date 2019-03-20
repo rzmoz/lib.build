@@ -1,25 +1,28 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Threading.Tasks;
 using Serilog;
 
 namespace Lib.Build
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
-            var buildArgs = new BuildArgs(args);
-
-#if DEBUG
-            if (buildArgs.IsDebug)
+            try
             {
-                Log.Warning("Paused for debug. PID: {ProcessId} | Name: {ProcessName}. Press {ENTER} to continue..", Process.GetCurrentProcess().Id, Process.GetCurrentProcess().ProcessName, "[ENTER]");
-                Console.ReadLine();
-            }
-#endif
+                var artifactsBuilder = new ArtifactsBuilder(args);
+                artifactsBuilder.Init();
 
-            var solutionBuilder = new SolutionBuilder(buildArgs);
-            solutionBuilder.Init();
+                await artifactsBuilder.PreBuild.RunAsync().ConfigureAwait(false);
+                await artifactsBuilder.Build.RunAsync().ConfigureAwait(false);
+                await artifactsBuilder.PostBuild.RunAsync().ConfigureAwait(false);
+                return 0;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, $"{e.Message}\r\n{e.InnerException?.Message}");
+                return -1;
+            }
         }
     }
 }
