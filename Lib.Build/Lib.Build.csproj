@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNet.Basics" Version="9.7.10" />
-    <PackageReference Include="DotNet.Basics.Cli" Version="2.2.0-rc.7" />
+    <PackageReference Include="DotNet.Basics.Cli" Version="2.2.0-rc.8" />
     <PackageReference Include="DotNet.Basics.PowerShell" Version="6.2.0-rc.1" />
   </ItemGroup>
 

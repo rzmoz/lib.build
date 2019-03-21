@@ -10,24 +10,23 @@ namespace Lib.Build
     {
         private readonly CliArgs _cliArgs;
 
-        private readonly SwitchMappings _switchMappings = new SwitchMappings
-        {
-            {"v", nameof(Version) },
-            {"c", nameof(Configuration) },
-            {"config", nameof(Configuration) },
-            {"sln", nameof(SolutionDir) },
-            {"slnDir", nameof(SolutionDir) },
-            {"ps1",nameof(Ps1CallbackRootDir) },
-            {"ps1Dir", nameof(Ps1CallbackRootDir) },
-            {"releaseFilter", nameof(ReleaseProjectFilter) },
-            {"testFilter", nameof(TestProjectFilter) },
-        };
-
         public BuildArgs(string[] args)
         {
             _cliArgs = new CliArgsBuilder()
                  .WithSerilog()
-                 .Build(args, _switchMappings);
+                 .WithSwitchMappings(() => new SwitchMappings
+                 {
+                     {"v", nameof(Version) },
+                     {"c", nameof(Configuration) },
+                     {"config", nameof(Configuration) },
+                     {"sln", nameof(SolutionDir) },
+                     {"slnDir", nameof(SolutionDir) },
+                     {"ps1",nameof(Ps1CallbackRootDir) },
+                     {"ps1Dir", nameof(Ps1CallbackRootDir) },
+                     {"releaseFilter", nameof(ReleaseProjectFilter) },
+                     {"testFilter", nameof(TestProjectFilter) },
+                 })
+                 .Build(args);
 
             SolutionDir = _cliArgs[nameof(SolutionDir)]?.ToDir();
             if (SolutionDir == null)
