@@ -41,7 +41,6 @@ namespace Lib.Build
 
         public bool IsDebug => _cliArgs.IsDebug;
 
-
         public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();
 
