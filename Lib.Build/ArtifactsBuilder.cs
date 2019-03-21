@@ -33,9 +33,11 @@ namespace Lib.Build
             Log.Debug($"{nameof(_args.ArtifactsDir)}: {_args.ArtifactsDir?.FullName()}");
             Log.Debug($"{nameof(_args.Ps1CallbackRootDir)}: {_args.Ps1CallbackRootDir?.FullName()}");
 
+            if (_args.SolutionDir.Exists() == false)
+                throw new DirectoryNotFoundException($"Solution Dir not found: {_args.SolutionDir.FullName()}");
+
             ResolveProjects();
             ResolvePs1Callbacks();
-
         }
 
         private void ResolveProjects()
@@ -61,6 +63,9 @@ namespace Lib.Build
 
             foreach (var releaseProject in _args.ReleaseProjects)
                 Log.Debug($"Release project found: {releaseProject.FullName()}");
+
+            if (_args.ReleaseProjects.Count == 0)
+                throw new BuildException($"No release projects found under {_args.SolutionDir.FullName()} with release filter: {_args.ReleaseProjectFilter}");
         }
         private void ResolvePs1Callbacks()
         {

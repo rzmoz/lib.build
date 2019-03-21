@@ -11,6 +11,7 @@ namespace Lib.Build
 
         private readonly SwitchMappings _switchMappings = new SwitchMappings
         {
+            {"v", nameof(Version) },
             {"c", nameof(Configuration) },
             {"config", nameof(Configuration) },
             {"sln", nameof(SolutionDir) },
@@ -33,10 +34,13 @@ namespace Lib.Build
         public DirPath Ps1CallbackRootDir => _cliArgs[nameof(Ps1CallbackRootDir)]?.ToDir();
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
 
+        public SemVersion Version => SemVersion.Parse(_cliArgs[nameof(Version)] ?? "0.0.0");
+
         public string ReleaseProjectFilter { get; set; } = "*.csproj";
         public string TestProjectFilter { get; set; } = "*.tests.csproj";
 
         public bool IsDebug => _cliArgs.IsDebug;
+
 
         public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();

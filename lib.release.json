@@ -1,0 +1,12 @@
+{
+  "nuget": {
+    "source": "https://api.nuget.org/v3/index.json"
+  },
+  "releases": [
+    {
+      "name": "Lib.Build",
+      "version": "3.0.0",
+      "prerelease": "rc.1"
+    }],
+  "tests": []
+}
