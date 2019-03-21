@@ -21,12 +21,6 @@ namespace Lib.Build
 
         public void Init()
         {
-            if (_args.IsDebug)
-            {
-                Log.Warning("Paused for debug. PID: {ProcessId} | Name: {ProcessName}. Press {ENTER} to continue..", Process.GetCurrentProcess().Id, Process.GetCurrentProcess().ProcessName, "[ENTER]");
-                Console.ReadLine();
-            }
-
             Log.Information("Initializing {ArtifactsBuilder}", nameof(ArtifactsBuilder));
             Log.Debug($"{nameof(_args.SolutionDir)}: {_args.SolutionDir?.FullName()}");
             Log.Debug($"{nameof(_args.Configuration)}: {_args.Configuration}");
@@ -76,7 +70,7 @@ namespace Lib.Build
 
             if (_args.Ps1CallbackRootDir == null)
             {
-                Log.Debug($"{nameof(_args.Ps1CallbackRootDir)} not set. Skipping");
+                Log.Information($"{nameof(_args.Ps1CallbackRootDir)} not set. Skipping");
                 return;
             }
 

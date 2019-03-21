@@ -25,20 +25,19 @@ namespace Lib.Build
 
         public async Task RunAsync()
         {
-            Log.Debug($"Looking for Solution files in {_args.SolutionDir}");
+            Log.Information("Starting {Step}", nameof(SolutionBuild));
 
             try
             {
-                var version = _args.Version;
-
-                var shortHash = PowerShellCli.RunScript($"git --git-dir=\"{_args.SolutionDir.FullName()}.git\" log --pretty=format:'%h' -n 1").First().ToString();
-                Log.Debug($"Adding short hash to version metadata:: {shortHash}");
-                version.Metadata += shortHash;
-                Log.Debug($"Updating projects with version: {version.SemVer20String}");
-
+                var version = _args.Version ?? GetVersionFromGit(_args.SolutionDir);
                 await _args.ReleaseProjects.ForEachParallelAsync(csproj => UpdateVersion(csproj, version)).ConfigureAwait(false);
 
+                Log.Debug($"Looking for Solution files in {_args.SolutionDir}");
                 var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
+                Log.Debug($"Found:");
+                foreach (var solutionFile in solutionFiles)
+                    Log.Debug(solutionFile.Name);
+
                 foreach (var solutionFile in solutionFiles)
                 {
                     Log.Information("Building: {SolutionFile}", solutionFile.FullName());
@@ -51,6 +50,27 @@ namespace Lib.Build
             {
                 await _args.ReleaseProjects.ForEachParallelAsync(RevertVersion).ConfigureAwait(false);
             }
+        }
+
+        private static SemVersion GetVersionFromGit(DirPath solutionDir)
+        {
+            var gitPath = solutionDir.ToDir(".git").FullName();
+            Log.Debug($"Trying to resolve version from git in {gitPath}");
+
+            var gitVersions = PowerShellCli.RunScript($"git --git-dir=\"{gitPath}\" tag -l v*");
+
+            if (gitVersions.Any() == false)
+            {
+                Log.Debug($"No tags found in gitrepo in {gitPath}");
+                return new SemVersion(0, 0, 0);
+            }
+
+            var latestVersion = gitVersions.Select(v => new SemVersion(v)).Max();
+            var shortHash = PowerShellCli.RunScript($"git --git-dir=\"{gitPath }\" log --pretty=format:'%h' -n 1").First().ToString();
+
+            latestVersion.Metadata += shortHash;
+            Log.Debug($"Version resolved from git to {latestVersion}");
+            return latestVersion;
         }
 
         private static Task UpdateVersion(FilePath projectFile, SemVersion version)
@@ -69,9 +89,7 @@ namespace Lib.Build
 
             EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.SemVer10String);
             EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.SemVer10String);
-
-            Log.Verbose($"Updated csproj for {projectFile.Name}: \r\n{projectXDoc}");
-
+            Log.Debug($"Updating {projectFile.Name} to {version.SemVer20String}");
             using (var writer = new StreamWriter(projectFile.FullName()))
             using (var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true }))
             {
@@ -93,8 +111,16 @@ namespace Lib.Build
         private static Task RevertVersion(FilePath projectFile)
         {
             var tmpFile = GetTempFilePath(projectFile);
-            Log.Debug($"Reverting {tmpFile.FullName()} to {projectFile.FullName()}");
-            tmpFile.MoveTo(projectFile, overwrite: true, ensureTargetDir: false);
+            if (tmpFile.Exists() == false)
+            {
+                Log.Debug($"{tmpFile.FullName()} not found.");
+
+            }
+            else
+            {
+                Log.Debug($"Reverting {tmpFile.FullName()} to {projectFile.FullName()}");
+                tmpFile.MoveTo(projectFile, overwrite: true, ensureTargetDir: false);
+            }
             return Task.CompletedTask;
         }
 

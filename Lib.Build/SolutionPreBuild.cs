@@ -19,6 +19,8 @@ namespace Lib.Build
 
         public async Task RunAsync()
         {
+            Log.Information("Starting {Step}", nameof(SolutionPreBuild));
+
             var cleanupTasks = new List<Task> { CleanDir(_args.ArtifactsDir) };//add artifacts dir
             //add csproj bin dirs 
             var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories);
@@ -30,12 +32,7 @@ namespace Lib.Build
         private Task CleanDir(DirPath dir)
         {
             Log.Debug($"Cleaning {{Dir}}", dir.FullName());
-
-            if (dir.Exists() == false)
-                throw new DirectoryNotFoundException(dir.FullName());
-
             dir.CleanIfExists();
-
             return Task.CompletedTask;
         }
     }

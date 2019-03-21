@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using DotNet.Basics.Cli;
 using Serilog;
 
 namespace Lib.Build
@@ -8,6 +9,9 @@ namespace Lib.Build
     {
         static async Task<int> Main(string[] args)
         {
+#if DEBUG
+            args.PauseIfDebug();
+#endif
             try
             {
                 var artifactsBuilder = new ArtifactsBuilder(args);

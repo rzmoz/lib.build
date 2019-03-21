@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using DotNet.Basics.Cli;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
@@ -27,19 +28,27 @@ namespace Lib.Build
             _cliArgs = new CliArgsBuilder()
                  .WithSerilog()
                  .Build(args, _switchMappings);
+
+            SolutionDir = _cliArgs[nameof(SolutionDir)]?.ToDir();
+            if (SolutionDir == null)
+            {
+                var tryDir = args.FirstOrDefault();
+                if (tryDir == null)
+                    return;
+                if (tryDir.ToDir().Exists())
+                    SolutionDir = tryDir.ToDir();
+            }
         }
 
         public string Configuration => _cliArgs[nameof(Configuration)] ?? "release";
-        public DirPath SolutionDir => _cliArgs[nameof(SolutionDir)]?.ToDir();
+        public DirPath SolutionDir { get; }
         public DirPath Ps1CallbackRootDir => _cliArgs[nameof(Ps1CallbackRootDir)]?.ToDir();
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
 
-        public SemVersion Version => SemVersion.Parse(_cliArgs[nameof(Version)] ?? "0.0.0");
+        public SemVersion Version => SemVersion.Parse(_cliArgs[nameof(Version)]);
 
         public string ReleaseProjectFilter { get; set; } = "*.csproj";
         public string TestProjectFilter { get; set; } = "*.tests.csproj";
-
-        public bool IsDebug => _cliArgs.IsDebug;
 
         public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();
