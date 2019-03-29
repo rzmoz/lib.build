@@ -3,12 +3,18 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>lib.build</ToolCommandName>
+    <ToolCommandName>build</ToolCommandName>
     <Authors>rzmoz</Authors>
     <Product>Lib.Build</Product>
     <Description>Builds Visual Studio 2017+ solutions and produces easy to consume release artifacts</Description>
     <RepositoryUrl>https://github.com/rzmoz/lib.build</RepositoryUrl>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>    
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
+    <PackageLicenseFile></PackageLicenseFile>
+    <Copyright>@rzmoz</Copyright>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
