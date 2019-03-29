@@ -25,7 +25,11 @@ namespace Lib.Build
             Log.Information("Initializing {ArtifactsBuilder}", nameof(ArtifactsBuilder));
             Log.Debug($"{nameof(_args.SolutionDir)}: {_args.SolutionDir?.FullName()}");
             Log.Debug($"{nameof(_args.Configuration)}: {_args.Configuration}");
+            Log.Debug($"{nameof(_args.Version)}: {_args.Version}");
             Log.Debug($"{nameof(_args.ArtifactsDir)}: {_args.ArtifactsDir?.FullName()}");
+            Log.Debug($"{nameof(_args.ReleaseProjectFilter)}: {_args.ReleaseProjectFilter}");
+            Log.Debug($"{nameof(_args.TestProjectFilter)}: {_args.TestProjectFilter}");
+            Log.Debug($"{nameof(_args.Publish)}: {_args.Publish}");
 
             if (_args.SolutionDir.Exists() == false)
                 throw new DirectoryNotFoundException($"Solution Dir not found: {_args.SolutionDir.FullName()}");

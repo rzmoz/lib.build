@@ -26,6 +26,8 @@ namespace Lib.Build
                  })
                  .Build(args);
 
+            Publish = _cliArgs.IsSet(nameof(Publish));
+
             SolutionDir = _cliArgs[nameof(SolutionDir)]?.ToDir();
             if (SolutionDir == null)
             {
@@ -40,6 +42,8 @@ namespace Lib.Build
         public string Configuration => _cliArgs[nameof(Configuration)] ?? "release";
         public DirPath SolutionDir { get; set; }
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
+
+        public bool Publish { get; }
 
         public SemVersion Version => SemVersion.Parse(_cliArgs[nameof(Version)]);
 

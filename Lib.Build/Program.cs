@@ -20,6 +20,7 @@ namespace Lib.Build
                 artifactsBuilder.PreBuild.Run();
                 artifactsBuilder.Build.Run();
                 artifactsBuilder.PostBuild.Run();
+
                 var endTimestamp = DateTime.UtcNow;
                 var duration = endTimestamp - startTimestamp;
                 Log.Information($"Build completed in {duration:g}");
