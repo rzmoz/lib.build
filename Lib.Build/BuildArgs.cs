@@ -29,6 +29,8 @@ namespace Lib.Build
 
             Publish = args.IsSet(nameof(Publish));
             SolutionDir = _cliArgs[nameof(SolutionDir), 0]?.ToDir();
+            ReleaseProjectFilter = _cliArgs[nameof(ReleaseProjectFilter)] ?? "*.csproj";
+            TestProjectFilter = _cliArgs[nameof(TestProjectFilter)] ?? "*.tests.csproj";
 
             if (SolutionDir == null) return;
             if (SolutionDir.Exists() || Path.IsPathRooted(SolutionDir.RawPath))
@@ -47,8 +49,8 @@ namespace Lib.Build
 
         public SemVersion Version => SemVersion.Parse(_cliArgs[nameof(Version)]);
 
-        public string ReleaseProjectFilter { get; set; } = "*.csproj";
-        public string TestProjectFilter { get; set; } = "*.tests.csproj";
+        public string ReleaseProjectFilter { get; }
+        public string TestProjectFilter { get; }
 
         public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();
