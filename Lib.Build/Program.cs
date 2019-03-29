@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using DotNet.Basics.Cli;
 using Serilog;
 
@@ -7,19 +6,23 @@ namespace Lib.Build
 {
     class Program
     {
-        static async Task<int> Main(string[] args)
+        static int Main(string[] args)
         {
 #if DEBUG
             args.PauseIfDebug();
 #endif
             try
             {
+                var startTimestamp = DateTime.UtcNow;
                 var artifactsBuilder = new ArtifactsBuilder(args);
                 artifactsBuilder.Init();
 
-                await artifactsBuilder.PreBuild.RunAsync().ConfigureAwait(false);
-                await artifactsBuilder.Build.RunAsync().ConfigureAwait(false);
-                await artifactsBuilder.PostBuild.RunAsync().ConfigureAwait(false);
+                artifactsBuilder.PreBuild.Run();
+                artifactsBuilder.Build.Run();
+                artifactsBuilder.PostBuild.Run();
+                var endTimestamp = DateTime.UtcNow;
+                var duration = endTimestamp - startTimestamp;
+                Log.Information($"Build completed in {duration:g}");
                 return 0;
             }
             catch (Exception e)

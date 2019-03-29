@@ -23,14 +23,14 @@ namespace Lib.Build
             _args = args;
         }
 
-        public async Task RunAsync()
+        public void Run()
         {
             Log.Information("Starting {Step}", nameof(SolutionBuild));
 
             try
             {
                 var version = _args.Version ?? GetVersionFromGit(_args.SolutionDir);
-                await _args.ReleaseProjects.ForEachParallelAsync(csproj => UpdateVersion(csproj, version)).ConfigureAwait(false);
+                _args.ReleaseProjects.ForEachParallel(csproj => UpdateVersion(csproj, version));
 
                 Log.Debug($"Looking for Solution files in {_args.SolutionDir}");
                 var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
@@ -48,7 +48,7 @@ namespace Lib.Build
             }
             finally
             {
-                await _args.ReleaseProjects.ForEachParallelAsync(RevertVersion).ConfigureAwait(false);
+                _args.ReleaseProjects.ForEachParallel(RevertVersion);
             }
         }
 
@@ -73,7 +73,7 @@ namespace Lib.Build
             return latestVersion;
         }
 
-        private static Task UpdateVersion(FilePath projectFile, SemVersion version)
+        private static void UpdateVersion(FilePath projectFile, SemVersion version)
         {
             var tmpFile = GetTempFilePath(projectFile);
             Log.Debug($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");
@@ -95,8 +95,6 @@ namespace Lib.Build
             {
                 projectXDoc.Save(xmlWriter);
             }
-
-            return Task.CompletedTask;
         }
 
         private static void EnsureNodeWithValue(XElement parentNode, string nodeName, string value)
@@ -108,7 +106,7 @@ namespace Lib.Build
                 node.Value = value;
         }
 
-        private static Task RevertVersion(FilePath projectFile)
+        private static void RevertVersion(FilePath projectFile)
         {
             var tmpFile = GetTempFilePath(projectFile);
             if (tmpFile.Exists() == false)
@@ -121,7 +119,6 @@ namespace Lib.Build
                 Log.Debug($"Reverting {tmpFile.FullName()} to {projectFile.FullName()}");
                 tmpFile.MoveTo(projectFile, overwrite: true, ensureTargetDir: false);
             }
-            return Task.CompletedTask;
         }
 
         private static FilePath GetTempFilePath(FilePath projectFile)

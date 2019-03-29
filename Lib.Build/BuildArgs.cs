@@ -21,8 +21,6 @@ namespace Lib.Build
                      {"config", nameof(Configuration) },
                      {"sln", nameof(SolutionDir) },
                      {"slnDir", nameof(SolutionDir) },
-                     {"ps1",nameof(Ps1CallbackRootDir) },
-                     {"ps1Dir", nameof(Ps1CallbackRootDir) },
                      {"releaseFilter", nameof(ReleaseProjectFilter) },
                      {"testFilter", nameof(TestProjectFilter) },
                  })
@@ -41,7 +39,6 @@ namespace Lib.Build
 
         public string Configuration => _cliArgs[nameof(Configuration)] ?? "release";
         public DirPath SolutionDir { get; set; }
-        public DirPath Ps1CallbackRootDir => _cliArgs[nameof(Ps1CallbackRootDir)]?.ToDir();
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
 
         public SemVersion Version => SemVersion.Parse(_cliArgs[nameof(Version)]);
@@ -51,9 +48,5 @@ namespace Lib.Build
 
         public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();
-
-        public IReadOnlyList<FilePath> PreBuildCallbacks { get; set; } = new List<FilePath>();
-        public IReadOnlyList<FilePath> BuildCallbacks { get; set; } = new List<FilePath>();
-        public IReadOnlyList<FilePath> PostBuildCallbacks { get; set; } = new List<FilePath>();
     }
 }

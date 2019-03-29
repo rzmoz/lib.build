@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.IO;
+using DotNet.Basics.Collections;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
 using Serilog;
@@ -17,23 +15,20 @@ namespace Lib.Build
             _args = args;
         }
 
-        public async Task RunAsync()
+        public void Run()
         {
             Log.Information("Starting {Step}", nameof(SolutionPreBuild));
 
-            var cleanupTasks = new List<Task> { CleanDir(_args.ArtifactsDir) };//add artifacts dir
+            CleanDir(_args.ArtifactsDir);
             //add csproj bin dirs 
             var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories);
-            cleanupTasks.AddRange(csprojBinDirs.Select(dir => CleanDir(dir.ToString().ToDir())));
-
-            await Task.WhenAll(cleanupTasks).ConfigureAwait(false);
+            csprojBinDirs.ForEachParallel(CleanDir);
         }
 
-        private Task CleanDir(DirPath dir)
+        private void CleanDir(DirPath dir)
         {
             Log.Debug($"Cleaning {{Dir}}", dir.FullName());
             dir.CleanIfExists();
-            return Task.CompletedTask;
         }
     }
 }
