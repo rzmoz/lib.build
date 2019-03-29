@@ -1,6 +1,7 @@
 ﻿using System;
 using DotNet.Basics.Cli;
-using Serilog;
+using DotNet.Basics.Diagnostics;
+using DotNet.Basics.Serilog;
 
 namespace Lib.Build
 {
@@ -28,7 +29,7 @@ namespace Lib.Build
             }
             catch (Exception e)
             {
-                Log.Error(e, $"{e.Message}\r\n{e.InnerException?.Message}");
+                Log.Error($"{e.Message}\r\n{e.InnerException?.Message}", e);
                 return -1;
             }
         }

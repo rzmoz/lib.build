@@ -1,8 +1,8 @@
 ﻿using System.IO;
 using DotNet.Basics.Collections;
+using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
-using Serilog;
 
 namespace Lib.Build
 {
@@ -17,7 +17,7 @@ namespace Lib.Build
 
         public void Run()
         {
-            Log.Information("Starting {Step}", nameof(SolutionPreBuild));
+            Log.Information($"Starting {nameof(SolutionPreBuild)}");
 
             CleanDir(_args.ArtifactsDir);
             //add csproj bin dirs 
@@ -27,7 +27,7 @@ namespace Lib.Build
 
         private void CleanDir(DirPath dir)
         {
-            Log.Debug($"Cleaning {{Dir}}", dir.FullName());
+            Log.Debug($"Cleaning {dir.FullName()}");
             dir.CleanIfExists();
         }
     }
