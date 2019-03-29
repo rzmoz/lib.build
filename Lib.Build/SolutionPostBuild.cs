@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Text;
 using DotNet.Basics.Collections;
+using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
-using Serilog;
 
 namespace Lib.Build
 {
@@ -37,7 +37,7 @@ namespace Lib.Build
 
         public void Run()
         {
-            Log.Information("Starting {Step}", nameof(SolutionPostBuild));
+            Log.Information($"Starting {nameof(SolutionPostBuild)}");
             _args.ArtifactsDir.CreateIfNotExists();
             _args.ReleaseProjects.ForEachParallel(CopyArtifacts);
             _args.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);

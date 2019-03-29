@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using DotNet.Basics.Cli;
 using DotNet.Basics.IO;
@@ -13,7 +14,7 @@ namespace Lib.Build
         public BuildArgs(string[] args)
         {
             _cliArgs = new CliArgsBuilder()
-                 .WithSerilog()
+                .WithSerilog()
                  .WithSwitchMappings(() => new SwitchMappings
                  {
                      {"v", nameof(Version) },
@@ -26,17 +27,16 @@ namespace Lib.Build
                  })
                  .Build(args);
 
-            Publish = _cliArgs.IsSet(nameof(Publish));
+            Publish = args.IsSet(nameof(Publish));
+            SolutionDir = _cliArgs[nameof(SolutionDir), 0]?.ToDir();
 
-            SolutionDir = _cliArgs[nameof(SolutionDir)]?.ToDir();
-            if (SolutionDir == null)
-            {
-                var tryDir = args.FirstOrDefault();
-                if (tryDir == null)
-                    return;
-                if (tryDir.ToDir().Exists())
-                    SolutionDir = tryDir.ToDir();
-            }
+            if (SolutionDir == null) return;
+            if (SolutionDir.Exists() || Path.IsPathRooted(SolutionDir.RawPath))
+                return;
+
+            var tryInDefaultProjectsDir = "c:\\projects".ToDir().Add(SolutionDir.Segments.ToArray());
+            if (tryInDefaultProjectsDir.Exists())
+                SolutionDir = tryInDefaultProjectsDir;
         }
 
         public string Configuration => _cliArgs[nameof(Configuration)] ?? "release";

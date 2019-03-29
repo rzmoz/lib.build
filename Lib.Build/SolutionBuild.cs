@@ -1,14 +1,13 @@
 ﻿using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using DotNet.Basics.Collections;
+using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.PowerShell;
 using DotNet.Basics.Sys;
-using Serilog;
 
 namespace Lib.Build
 {
@@ -25,7 +24,7 @@ namespace Lib.Build
 
         public void Run()
         {
-            Log.Information("Starting {Step}", nameof(SolutionBuild));
+            Log.Information($"Starting {nameof(SolutionBuild)}");
 
             try
             {
@@ -40,7 +39,7 @@ namespace Lib.Build
 
                 foreach (var solutionFile in solutionFiles)
                 {
-                    Log.Information("Building: {SolutionFile}", solutionFile.FullName());
+                    Log.Information($"Building: {solutionFile.FullName()}");
                     var result = ExternalProcess.Run("dotnet", $" build \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --no-incremental --verbosity quiet", Log.Debug, Log.Error);
                     if (result.ExitCode != 0)
                         throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details");
