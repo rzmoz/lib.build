@@ -21,6 +21,9 @@ namespace Lib.Build
 
         public void Init()
         {
+            if (_args.SolutionDir == null)
+                _args.SolutionDir = ".".ToDir();
+
             Log.Information("Initializing {ArtifactsBuilder}", nameof(ArtifactsBuilder));
             Log.Debug($"{nameof(_args.SolutionDir)}: {_args.SolutionDir?.FullName()}");
             Log.Debug($"{nameof(_args.Configuration)}: {_args.Configuration}");

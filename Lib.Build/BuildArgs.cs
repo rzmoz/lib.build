@@ -40,7 +40,7 @@ namespace Lib.Build
         }
 
         public string Configuration => _cliArgs[nameof(Configuration)] ?? "release";
-        public DirPath SolutionDir { get; }
+        public DirPath SolutionDir { get; set; }
         public DirPath Ps1CallbackRootDir => _cliArgs[nameof(Ps1CallbackRootDir)]?.ToDir();
         public DirPath ArtifactsDir => _cliArgs[nameof(ArtifactsDir)]?.ToDir() ?? SolutionDir?.ToDir(".releaseArtifacts");
 
