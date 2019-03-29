@@ -26,7 +26,8 @@ namespace Lib.Build
 
         private Task ProjectPostBuildAsync(FilePath projectFile)
         {
-            var sourceDir = projectFile.Directory().ToDir("bin", _args.Configuration).EnumerateDirectories().Single();
+            var configurationDir = projectFile.Directory().ToDir("bin", _args.Configuration);
+            var sourceDir = configurationDir.EnumerateDirectories().Single();
             var targetDir = _args.ArtifactsDir.ToDir(projectFile.NameWoExtension).FullName();
             Log.Debug($"Copying Artifacts for {projectFile.Name}");
 
@@ -35,6 +36,13 @@ namespace Lib.Build
             var result = Robocopy.CopyDir(sourceDir.FullName(), targetDir, includeSubFolders: true, writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
             if (result.Failed)
                 throw new BuildException($"Copying Artifacts {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
+
+            //check for nuget packages
+            robocopyOutput = new StringBuilder();
+            result = Robocopy.CopyFile(configurationDir.FullName(), _args.ArtifactsDir.FullName(), "*.nupkg", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+            if (result.Failed)
+                throw new BuildException($"Copying packages {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
+
             return Task.CompletedTask;
         }
     }
