@@ -60,22 +60,23 @@ namespace Lib.Build
         }
         private void CopyArtifacts(FilePath projectFile)
         {
-            
+
             var releaseTargetDir = GetTargetDir(projectFile);
             var configurationDir = GetConfigurationDir(projectFile);
-            
+
             if (_args.Publish)
             {
                 Log.Debug($"Publishing {releaseTargetDir.Name}");
-                var publishResult= ExternalProcess.Run("dotnet", $" publish \"{projectFile.FullName()}\" --configuration {_args.Configuration} --force --no-build --verbosity quiet --output \"{releaseTargetDir}\"", null, Log.Error);
+                var publishResult = ExternalProcess.Run("dotnet", $" publish \"{projectFile.FullName()}\" --configuration {_args.Configuration} --force --no-build --verbosity quiet --output \"{releaseTargetDir}\"", Log.Verbose, Log.Error);
                 if (publishResult.ExitCode != 0)
                     throw new BuildException($"Publish failed for {projectFile.NameWoExtension}. See logs for details");
             }
             else
             {
+                Log.Debug($"Copying build artifacts for {releaseTargetDir.Name}");
                 var robocopyOutput = new StringBuilder();
                 var buildOutputDir = configurationDir.EnumerateDirectories().Single();
-                var result = Robocopy.CopyDir(buildOutputDir.FullName(), releaseTargetDir.FullName(), writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+                var result = Robocopy.CopyDir(buildOutputDir.FullName(), releaseTargetDir.FullName(), includeSubFolders: true, writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
                 if (result.Failed)
                     throw new BuildException($"Copy artifacts for {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
             }
