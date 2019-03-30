@@ -42,8 +42,7 @@ namespace Lib.Build
             Log.Information($"Resolving Projects");
             var releaseProjects = _args.SolutionDir.EnumerateFiles(_args.ReleaseProjectFilter, SearchOption.AllDirectories).ToList();
             _args.TestProjects = _args.SolutionDir.EnumerateFiles(_args.TestProjectFilter, SearchOption.AllDirectories).ToList();
-
-
+            
             foreach (var testProject in _args.TestProjects)
             {
                 Log.Debug($"Test project found: {testProject.FullName()}");

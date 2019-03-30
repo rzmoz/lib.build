@@ -1,7 +1,6 @@
 ﻿using System;
 using DotNet.Basics.Cli;
 using DotNet.Basics.Diagnostics;
-using DotNet.Basics.Serilog;
 
 namespace Lib.Build
 {

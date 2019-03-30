@@ -111,7 +111,6 @@ namespace Lib.Build
             if (tmpFile.Exists() == false)
             {
                 Log.Debug($"{tmpFile.FullName()} not found.");
-
             }
             else
             {
