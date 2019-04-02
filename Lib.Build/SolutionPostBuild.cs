@@ -17,7 +17,7 @@ namespace Lib.Build
         private const string _dotNetFrameworkPattern = @"^net[0-9]+$";
         private static readonly Regex _dotNetFrameworkRegex = new Regex(_dotNetFrameworkPattern, RegexOptions.IgnoreCase);
 
-        private static readonly IReadOnlyList<string> _runtimeDirList = new[]
+        private static readonly IReadOnlyList<string> _languageDirs = new[]
         {
             "cs",
             "de",
@@ -29,7 +29,6 @@ namespace Lib.Build
             "pl",
             "pt-BR",
             "ru",
-            "runtimes",
             "tr",
             "zh-Hans",
             "zh-Hant"
@@ -61,7 +60,7 @@ namespace Lib.Build
         private void CleanRuntimeArtifacts(FilePath projectFile)
         {
             var targetDir = GetTargetDir(projectFile);
-            _runtimeDirList.ForEachParallel(dir => targetDir.ToDir(dir).DeleteIfExists());
+            _languageDirs.ForEachParallel(dir => targetDir.ToDir(dir).DeleteIfExists());
         }
         private void CopyArtifacts(FilePath projectFile)
         {
@@ -81,7 +80,7 @@ namespace Lib.Build
                 Log.Debug($"Copying build artifacts for {releaseTargetDir.Name}");
                 var robocopyOutput = new StringBuilder();
                 var buildOutputDir = configurationDir.EnumerateDirectories().Single();
-                
+
                 if (_dotNetFrameworkRegex.IsMatch(buildOutputDir.Name))
                 {
                     Log.Debug($"{projectFile.NameWoExtension} is .NET Framework");
