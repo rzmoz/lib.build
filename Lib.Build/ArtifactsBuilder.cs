@@ -2,6 +2,7 @@
 using System.Linq;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
+using DotNet.Basics.Sys;
 
 namespace Lib.Build
 {
@@ -21,8 +22,7 @@ namespace Lib.Build
 
         public void Init()
         {
-            if (_args.SolutionDir == null)
-                _args.SolutionDir = ".".ToDir();
+            _args.SolutionDir = VerifySolutionDir(_args.SolutionDir);
 
             _initLog.Information($"Initializing {nameof(ArtifactsBuilder)}");
             _initLog.Debug($"{nameof(_args.SolutionDir).Highlight()}: {_args.SolutionDir?.FullName()}");
@@ -38,6 +38,33 @@ namespace Lib.Build
 
             ResolveProjects();
         }
+
+        private DirPath VerifySolutionDir(DirPath currentDir)
+        {
+            if (currentDir == null ||currentDir.Name.StartsWith("-"))
+            {
+                currentDir = ".".ToDir().FullName().ToDir();
+                _initLog.Debug($"SolutionDir not set. Will try to resolve from first dir with sln file");
+            }
+
+            if (currentDir.Exists() == false)
+                throw new DirectoryNotFoundException(currentDir.FullName());
+            
+            do
+            {
+                _initLog.Debug($"Looking for sln files in {currentDir.FullName()}");
+                if (currentDir.EnumerateFiles("*.sln").Any())
+                {
+                    _initLog.Debug($"SolutionDir resolved to: {currentDir.FullName()}. ");
+                    return currentDir;
+                }
+
+                currentDir = currentDir.Parent;
+            } while (currentDir != null);
+
+            throw new BuildException($"No solution files found in {".".ToDir().FullName()} or any parent dir");
+        }
+
 
         private void ResolveProjects()
         {
