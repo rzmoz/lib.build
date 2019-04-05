@@ -16,6 +16,7 @@ namespace Lib.Build
 
         private const string _dotNetFrameworkPattern = @"^net[0-9]+$";
         private static readonly Regex _dotNetFrameworkRegex = new Regex(_dotNetFrameworkPattern, RegexOptions.IgnoreCase);
+        private readonly ILogDispatcher _slnLog;
 
         private static readonly IReadOnlyList<string> _languageDirs = new[]
         {
@@ -34,14 +35,15 @@ namespace Lib.Build
             "zh-Hant"
         };
 
-        public SolutionPostBuild(BuildArgs args)
+        public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog)
         {
             _args = args;
+            _slnLog = slnLog.InContext(nameof(SolutionPostBuild));
         }
 
         public void Run()
         {
-            Log.Information($"Starting {nameof(SolutionPostBuild)}");
+            _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
             _args.ArtifactsDir.CreateIfNotExists();
             _args.ReleaseProjects.ForEachParallel(CopyArtifacts);
             _args.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
@@ -67,23 +69,24 @@ namespace Lib.Build
 
             var releaseTargetDir = GetTargetDir(projectFile);
             var configurationDir = GetConfigurationDir(projectFile);
+            var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
 
             if (_args.Publish)
             {
-                Log.Debug($"Publishing {releaseTargetDir.Name}");
-                var publishResult = ExternalProcess.Run("dotnet", $" publish \"{projectFile.FullName()}\" --configuration {_args.Configuration} --force --no-build --verbosity quiet --output \"{releaseTargetDir}\"", Log.Verbose, Log.Error);
+                projectLog.Debug($"Publishing {releaseTargetDir.Name}");
+                var publishResult = ExternalProcess.Run("dotnet", $" publish \"{projectFile.FullName()}\" --configuration {_args.Configuration} --force --no-build --verbosity quiet --output \"{releaseTargetDir}\"", projectLog.Verbose, projectLog.Error);
                 if (publishResult.ExitCode != 0)
                     throw new BuildException($"Publish failed for {projectFile.NameWoExtension}. See logs for details");
             }
             else
             {
-                Log.Debug($"Copying build artifacts for {releaseTargetDir.Name}");
+                projectLog.Debug($"Copying build artifacts for {releaseTargetDir.Name}");
                 var robocopyOutput = new StringBuilder();
                 var buildOutputDir = configurationDir.EnumerateDirectories().Single();
 
                 if (_dotNetFrameworkRegex.IsMatch(buildOutputDir.Name))
                 {
-                    Log.Debug($"{projectFile.NameWoExtension} is .NET Framework");
+                    projectLog.Debug($"{projectFile.NameWoExtension} is .NET Framework");
                     var binDir = buildOutputDir.Add("bin");
                     Robocopy.MoveContent(buildOutputDir.FullName(), binDir.FullName(), "*.dll", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
                     Robocopy.MoveContent(buildOutputDir.FullName(), binDir.FullName(), "*.pdb", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));

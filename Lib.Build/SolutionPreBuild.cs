@@ -9,15 +9,17 @@ namespace Lib.Build
     public class SolutionPreBuild
     {
         private readonly BuildArgs _args;
+        private readonly ILogDispatcher _slnLog;
 
-        public SolutionPreBuild(BuildArgs args)
+        public SolutionPreBuild(BuildArgs args, ILogDispatcher slnLog)
         {
             _args = args;
+            _slnLog = slnLog.InContext(nameof(SolutionPreBuild));
         }
 
         public void Run()
         {
-            Log.Information($"Starting {nameof(SolutionPreBuild)}");
+            _slnLog.Information($"Starting {nameof(SolutionPreBuild)}");
 
             CleanDir(_args.ArtifactsDir);
             //add csproj bin dirs 
@@ -27,7 +29,7 @@ namespace Lib.Build
 
         private void CleanDir(DirPath dir)
         {
-            Log.Debug($"Cleaning {dir.FullName()}");
+            _slnLog.Debug($"Cleaning {dir.FullName()}");
             dir.CleanIfExists();
         }
     }

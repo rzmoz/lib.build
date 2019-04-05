@@ -9,12 +9,12 @@ namespace Lib.Build
 {
     public class BuildArgs
     {
-        private readonly CliArgs _cliArgs;
+        private readonly CliHost _cliArgs;
 
         public BuildArgs(string[] args)
         {
-            _cliArgs = new CliArgsBuilder()
-                .WithSerilog()
+            _cliArgs = new CliHostBuilder()
+                 .WithColoredConsole()
                  .WithSwitchMappings(() => new SwitchMappings
                  {
                      {"v", nameof(Version) },

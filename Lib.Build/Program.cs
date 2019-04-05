@@ -14,7 +14,7 @@ namespace Lib.Build
             try
             {
                 var startTimestamp = DateTime.UtcNow;
-                var artifactsBuilder = new ArtifactsBuilder(args);
+                var artifactsBuilder = new ArtifactsBuilder(args, Log.Logger);
                 artifactsBuilder.Init();
 
                 artifactsBuilder.PreBuild.Run();
