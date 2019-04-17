@@ -54,6 +54,7 @@ namespace Lib.Build
         {
             return _args.ArtifactsDir.ToDir(projectFile.NameWoExtension);
         }
+
         private DirPath GetConfigurationDir(FilePath projectFile)
         {
             return projectFile.Directory().ToDir("bin", _args.Configuration); ;
