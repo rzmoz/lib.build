@@ -35,7 +35,7 @@ namespace Lib.Build
 
                 _slnLog.Debug($"Looking for Solution files in {_args.SolutionDir}");
                 var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
-                _slnLog.Debug($"Found: {solutionFiles.Select(sln=>sln.Name).ToPrintString().Highlight()}");
+                _slnLog.Debug($"Found: {solutionFiles.Select(sln=>sln.Name).JoinString().Highlight()}");
 
                 foreach (var solutionFile in solutionFiles)
                 {
