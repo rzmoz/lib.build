@@ -14,7 +14,7 @@ namespace Lib.Build
         public BuildArgs(string[] args)
         {
             _cliArgs = new CliHostBuilder()
-                 .WithColoredConsole()
+                .WithColoredConsoleAndSystemConsoleAsFallback()
                  .WithSwitchMappings(() => new SwitchMappings
                  {
                      {"v", nameof(Version) },
