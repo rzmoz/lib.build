@@ -19,11 +19,13 @@ namespace Lib.Build
                  {
                      {"v", nameof(Version) },
                      {"c", nameof(Configuration) },
+                     {"p", nameof(Publish) },
                      {"config", nameof(Configuration) },
                      {"sln", nameof(SolutionDir) },
                      {"slnDir", nameof(SolutionDir) },
                      {"releaseFilter", nameof(ReleaseProjectFilter) },
-                     {"testFilter", nameof(TestProjectFilter) },
+                     {"testFilter", nameof(TestProjectFilter) }
+
                  })
                  .Build(args);
 
