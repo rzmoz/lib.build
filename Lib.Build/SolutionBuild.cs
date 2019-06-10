@@ -35,12 +35,17 @@ namespace Lib.Build
 
                 _slnLog.Debug($"Looking for Solution files in {_args.SolutionDir}");
                 var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
-                _slnLog.Debug($"Found: {solutionFiles.Select(sln=>sln.Name).JoinString().Highlight()}");
+                _slnLog.Debug($"Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
 
                 foreach (var solutionFile in solutionFiles)
                 {
-                    _slnLog.Information($"Building: {solutionFile.FullName().Highlight()}");
-                    var result = ExternalProcess.Run("dotnet", $" build \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --no-incremental --verbosity quiet", _slnLog.Debug, _slnLog.Error);
+                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --force --verbosity quiet";
+                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --no-incremental --verbosity quiet";
+                    var action = _args.Publish ? publishAction : buildAction;
+
+                    _slnLog.Information(action.Highlight());
+
+                    var result = ExternalProcess.Run("dotnet", action, _slnLog.Debug, _slnLog.Error);
                     if (result.ExitCode != 0)
                         throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details");
                 }

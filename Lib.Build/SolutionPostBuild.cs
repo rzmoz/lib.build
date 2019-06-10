@@ -59,7 +59,15 @@ namespace Lib.Build
 
         private DirPath GetConfigurationDir(FilePath projectFile)
         {
-            return projectFile.Directory().ToDir("bin", _args.Configuration); ;
+            return projectFile.Directory().ToDir("bin", _args.Configuration);
+        }
+
+        private DirPath GetArtifactsSourceDir(FilePath projectFile)
+        {
+            var configurationDir = GetConfigurationDir(projectFile);
+            var projectOutputDir= configurationDir.EnumerateDirectories().Single();
+            var publishDir = projectOutputDir.Add("publish");
+            return publishDir.Exists() ? publishDir : projectOutputDir;
         }
 
         private void CleanRuntimeArtifacts(FilePath projectFile)
@@ -67,38 +75,27 @@ namespace Lib.Build
             var targetDir = GetTargetDir(projectFile);
             _languageDirs.ForEachParallel(dir => targetDir.ToDir(dir).DeleteIfExists());
         }
+
         private void CopyArtifacts(FilePath projectFile)
         {
-
             var releaseTargetDir = GetTargetDir(projectFile);
-            var configurationDir = GetConfigurationDir(projectFile);
             var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
-
-            if (_args.Publish)
-            {
-                projectLog.Debug($"Publishing {releaseTargetDir.Name}");
-                var publishResult = ExternalProcess.Run("dotnet", $" publish \"{projectFile.FullName()}\" --configuration {_args.Configuration} --force --no-build --verbosity quiet --output \"{releaseTargetDir}\"", projectLog.Verbose, projectLog.Error);
-                if (publishResult.ExitCode != 0)
-                    throw new BuildException($"Publish failed for {projectFile.NameWoExtension}. See logs for details");
-                return;
-            }
-            //build
 
             projectLog.Debug($"Copying build artifacts for {releaseTargetDir.Name}");
             var robocopyOutput = new StringBuilder();
-            var buildOutputDir = configurationDir.EnumerateDirectories().Single();
+            var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
 
-            if (_dotNetFrameworkRegex.IsMatch(buildOutputDir.Name))
+            if (_dotNetFrameworkRegex.IsMatch(artifactsSourceDir.Name))
             {
                 projectLog.Debug($"{projectFile.NameWoExtension} is .NET Framework");
-                var binDir = buildOutputDir.Add("bin");
-                Robocopy.MoveContent(buildOutputDir.FullName(), binDir.FullName(), "*.dll", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
-                Robocopy.MoveContent(buildOutputDir.FullName(), binDir.FullName(), "*.pdb", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+                var binDir = artifactsSourceDir.Add("bin");
+                Robocopy.MoveContent(artifactsSourceDir.FullName(), binDir.FullName(), "*.dll", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+                Robocopy.MoveContent(artifactsSourceDir.FullName(), binDir.FullName(), "*.pdb", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
             }
 
-            AssertWebJob(projectFile.NameWoExtension, buildOutputDir, projectLog);
+            AssertWebJob(projectFile.NameWoExtension, artifactsSourceDir, projectLog);
 
-            var result = Robocopy.CopyDir(buildOutputDir.FullName(), releaseTargetDir.FullName(), includeSubFolders: true, writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+            var result = Robocopy.CopyDir(artifactsSourceDir.FullName(), releaseTargetDir.FullName(), includeSubFolders: true, writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
             if (result.Failed)
                 throw new BuildException($"Copy artifacts for {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
 
