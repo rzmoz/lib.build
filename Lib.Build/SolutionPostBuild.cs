@@ -65,7 +65,7 @@ namespace Lib.Build
         private DirPath GetArtifactsSourceDir(FilePath projectFile)
         {
             var configurationDir = GetConfigurationDir(projectFile);
-            var projectOutputDir= configurationDir.EnumerateDirectories().Single();
+            var projectOutputDir = configurationDir.EnumerateDirectories().Single();
             var publishDir = projectOutputDir.Add("publish");
             return publishDir.Exists() ? publishDir : projectOutputDir;
         }
@@ -108,6 +108,7 @@ namespace Lib.Build
             if (appSettingsFile.Exists() == false)
             {
                 log.Debug($"Not WebJob. {appSettingsFile.FullName()} not found");
+                return;
             }
             var appSettingsRawContent = appSettingsFile.ReadAllText(IfNotExists.Mute).ToLowerInvariant();//lowercase to ignore case when accessing properties
             log.Debug($"{appSettingsFile.Name} found:\r\n{appSettingsRawContent}");
