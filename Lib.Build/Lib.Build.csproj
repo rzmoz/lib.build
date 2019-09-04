@@ -18,9 +18,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNet.Basics" Version="9.8.4" />
-    <PackageReference Include="DotNet.Basics.Cli" Version="2.2.10" />
-    <PackageReference Include="DotNet.Basics.PowerShell" Version="6.2.2" />
+    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.1.0" />
+    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.1.1" />
+    <PackageReference Include="DotNet.Basics.PowerShell" Version="7.0.0-beta.1.0" />
   </ItemGroup>
 
 </Project>

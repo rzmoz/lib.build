@@ -13,14 +13,14 @@ namespace Lib.Build
 {
     public class SolutionBuild
     {
-        private readonly BuildArgs _args;
+        private readonly BuildHost _host;
         private readonly ILogDispatcher _slnLog;
 
         private const string _tempFileSuffix = ".temp";
 
-        public SolutionBuild(BuildArgs args, ILogDispatcher slnLog)
+        public SolutionBuild(BuildHost host, ILogDispatcher slnLog)
         {
-            _args = args;
+            _host = host;
             _slnLog = slnLog.InContext(nameof(SolutionBuild));
         }
 
@@ -30,18 +30,18 @@ namespace Lib.Build
 
             try
             {
-                var version = _args.Version ?? GetVersionFromGit(_args.SolutionDir);
-                _args.ReleaseProjects.ForEachParallel(csproj => UpdateVersion(csproj, version));
+                var version = _host.Version ?? GetVersionFromGit(_host.SolutionDir);
+                _host.ReleaseProjects.ForEachParallel(csproj => UpdateVersion(csproj, version));
 
-                _slnLog.Debug($"Looking for Solution files in {_args.SolutionDir}");
-                var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
+                _slnLog.Debug($"Looking for Solution files in {_host.SolutionDir}");
+                var solutionFiles = _host.SolutionDir.EnumerateFiles("*.sln").ToList();
                 _slnLog.Debug($"Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
 
                 foreach (var solutionFile in solutionFiles)
                 {
-                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --force --verbosity quiet";
-                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --no-incremental --verbosity quiet";
-                    var action = _args.Publish ? publishAction : buildAction;
+                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {_host.Configuration} --force --verbosity quiet";
+                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {_host.Configuration} --no-incremental --verbosity quiet";
+                    var action = _host.Publish ? publishAction : buildAction;
 
                     _slnLog.Information(action.Highlight());
 
@@ -52,7 +52,7 @@ namespace Lib.Build
             }
             finally
             {
-                _args.ReleaseProjects.ForEachParallel(RevertVersion);
+                _host.ReleaseProjects.ForEachParallel(RevertVersion);
             }
         }
 

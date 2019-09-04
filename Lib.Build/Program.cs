@@ -1,36 +1,29 @@
-﻿using System;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using DotNet.Basics.Cli;
-using DotNet.Basics.Diagnostics;
 
 namespace Lib.Build
 {
     class Program
     {
-        static int Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
 #if DEBUG
             args.PauseIfDebug();
 #endif
-            try
+            var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildHost.KeyMappings))
+                .BuildCustomHost((argss, config, log) => new BuildHost(argss.ToArray(), config, log));
+
+            return await host.RunAsync("Build", async (config, log) =>
             {
-                var startTimestamp = DateTime.UtcNow;
-                var artifactsBuilder = new ArtifactsBuilder(args, Log.Logger);
+                var artifactsBuilder = new ArtifactsBuilder(host, log);
                 artifactsBuilder.Init();
 
                 artifactsBuilder.PreBuild.Run();
                 artifactsBuilder.Build.Run();
                 artifactsBuilder.PostBuild.Run();
 
-                var endTimestamp = DateTime.UtcNow;
-                var duration = endTimestamp - startTimestamp;
-                Log.Information($"Build completed in {duration:g}");
-                return 0;
-            }
-            catch (Exception e)
-            {
-                Log.Error($"{e.Message}\r\n{e.InnerException?.Message}", e);
-                return -1;
-            }
+            }).ConfigureAwait(false);
         }
     }
 }

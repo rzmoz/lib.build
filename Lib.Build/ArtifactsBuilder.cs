@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
@@ -9,39 +10,39 @@ namespace Lib.Build
     public class ArtifactsBuilder
     {
         private readonly ILogDispatcher _initLog;
-        private readonly BuildArgs _args;
+        private readonly BuildHost _host;
 
-        public ArtifactsBuilder(string[] args, ILogDispatcher log)
+        public ArtifactsBuilder(BuildHost host, ILogDispatcher log)
         {
             _initLog = log.InContext("Init");
-            _args = new BuildArgs(args);
-            PreBuild = new SolutionPreBuild(_args, log);
-            Build = new SolutionBuild(_args, log);
-            PostBuild = new SolutionPostBuild(_args, log);
+            _host = host ?? throw new ArgumentNullException(nameof(host));
+            PreBuild = new SolutionPreBuild(_host, log);
+            Build = new SolutionBuild(_host, log);
+            PostBuild = new SolutionPostBuild(_host, log);
         }
 
         public void Init()
         {
-            _args.SolutionDir = VerifySolutionDir(_args.SolutionDir);
+            _host.SolutionDir = VerifySolutionDir(_host.SolutionDir);
 
             _initLog.Information($"Initializing {nameof(ArtifactsBuilder)}");
-            _initLog.Debug($"{nameof(_args.SolutionDir).Highlight()}: {_args.SolutionDir?.FullName()}");
-            _initLog.Debug($"{nameof(_args.Configuration).Highlight()}: {_args.Configuration}");
-            _initLog.Debug($"{nameof(_args.Version).Highlight()}: {_args.Version}");
-            _initLog.Debug($"{nameof(_args.ArtifactsDir).Highlight()}: {_args.ArtifactsDir?.FullName()}");
-            _initLog.Debug($"{nameof(_args.ReleaseProjectFilter).Highlight()}: {_args.ReleaseProjectFilter}");
-            _initLog.Debug($"{nameof(_args.TestProjectFilter).Highlight()}: {_args.TestProjectFilter}");
-            _initLog.Debug($"{nameof(_args.Publish).Highlight()}: {_args.Publish}");
+            _initLog.Debug($"{nameof(_host.SolutionDir).Highlight()}: {_host.SolutionDir?.FullName()}");
+            _initLog.Debug($"{nameof(_host.Configuration).Highlight()}: {_host.Configuration}");
+            _initLog.Debug($"{nameof(_host.Version).Highlight()}: {_host.Version}");
+            _initLog.Debug($"{nameof(_host.ArtifactsDir).Highlight()}: {_host.ArtifactsDir?.FullName()}");
+            _initLog.Debug($"{nameof(_host.ReleaseProjectFilter).Highlight()}: {_host.ReleaseProjectFilter}");
+            _initLog.Debug($"{nameof(_host.TestProjectFilter).Highlight()}: {_host.TestProjectFilter}");
+            _initLog.Debug($"{nameof(_host.Publish).Highlight()}: {_host.Publish}");
 
-            if (_args.SolutionDir.Exists() == false)
-                throw new DirectoryNotFoundException($"Solution Dir not found: {_args.SolutionDir.FullName()}");
+            if (_host.SolutionDir.Exists() == false)
+                throw new DirectoryNotFoundException($"Solution Dir not found: {_host.SolutionDir.FullName()}");
 
             ResolveProjects();
         }
 
         private DirPath VerifySolutionDir(DirPath currentDir)
         {
-            if (currentDir == null ||currentDir.Name.StartsWith("-"))
+            if (currentDir == null || currentDir.Name.StartsWith("-"))
             {
                 currentDir = ".".ToDir().FullName().ToDir();
                 _initLog.Debug($"SolutionDir not set. Will try to resolve from first dir with sln file");
@@ -49,7 +50,7 @@ namespace Lib.Build
 
             if (currentDir.Exists() == false)
                 throw new DirectoryNotFoundException(currentDir.FullName());
-            
+
             do
             {
                 _initLog.Debug($"Looking for sln files in {currentDir.FullName()}");
@@ -65,14 +66,13 @@ namespace Lib.Build
             throw new BuildException($"No solution files found in {".".ToDir().FullName()} or any parent dir");
         }
 
-
         private void ResolveProjects()
         {
             _initLog.Information($"Resolving Projects");
-            var releaseProjects = _args.SolutionDir.EnumerateFiles(_args.ReleaseProjectFilter, SearchOption.AllDirectories).ToList();
-            _args.TestProjects = _args.SolutionDir.EnumerateFiles(_args.TestProjectFilter, SearchOption.AllDirectories).ToList();
+            var releaseProjects = _host.SolutionDir.EnumerateFiles(_host.ReleaseProjectFilter, SearchOption.AllDirectories).ToList();
+            _host.TestProjects = _host.SolutionDir.EnumerateFiles(_host.TestProjectFilter, SearchOption.AllDirectories).ToList();
 
-            foreach (var testProject in _args.TestProjects)
+            foreach (var testProject in _host.TestProjects)
             {
                 _initLog.Debug($"Test project found: {testProject.FullName()}");
                 for (var i = 0; i < releaseProjects.Count; i++)
@@ -84,13 +84,13 @@ namespace Lib.Build
                     }
                 }
             }
-            _args.ReleaseProjects = releaseProjects;
+            _host.ReleaseProjects = releaseProjects;
 
-            foreach (var releaseProject in _args.ReleaseProjects)
+            foreach (var releaseProject in _host.ReleaseProjects)
                 _initLog.Debug($"Release project found: {releaseProject.FullName()}");
 
-            if (_args.ReleaseProjects.Count == 0)
-                throw new BuildException($"No release projects found under {_args.SolutionDir.FullName()} with release filter: {_args.ReleaseProjectFilter}");
+            if (_host.ReleaseProjects.Count == 0)
+                throw new BuildException($"No release projects found under {_host.SolutionDir.FullName()} with release filter: {_host.ReleaseProjectFilter}");
         }
 
         public SolutionPreBuild PreBuild { get; }

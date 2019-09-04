@@ -8,12 +8,12 @@ namespace Lib.Build
 {
     public class SolutionPreBuild
     {
-        private readonly BuildArgs _args;
+        private readonly BuildHost _host;
         private readonly ILogDispatcher _slnLog;
 
-        public SolutionPreBuild(BuildArgs args, ILogDispatcher slnLog)
+        public SolutionPreBuild(BuildHost host, ILogDispatcher slnLog)
         {
-            _args = args;
+            _host = host;
             _slnLog = slnLog.InContext(nameof(SolutionPreBuild));
         }
 
@@ -21,9 +21,9 @@ namespace Lib.Build
         {
             _slnLog.Information($"Starting {nameof(SolutionPreBuild)}");
 
-            CleanDir(_args.ArtifactsDir);
+            CleanDir(_host.ArtifactsDir);
             //add csproj bin dirs 
-            var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories);
+            var csprojBinDirs = _host.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories);
             csprojBinDirs.ForEachParallel(CleanDir);
         }
 

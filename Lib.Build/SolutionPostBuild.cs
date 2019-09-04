@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -7,14 +6,13 @@ using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Lib.Build
 {
     public class SolutionPostBuild
     {
-        private readonly BuildArgs _args;
+        private readonly BuildHost _host;
 
         private const string _dotNetFrameworkPattern = @"^net[0-9]+$";
         private static readonly Regex _dotNetFrameworkRegex = new Regex(_dotNetFrameworkPattern, RegexOptions.IgnoreCase);
@@ -37,29 +35,29 @@ namespace Lib.Build
             "zh-Hant"
         };
 
-        public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog)
+        public SolutionPostBuild(BuildHost host, ILogDispatcher slnLog)
         {
-            _args = args;
+            _host = host;
             _slnLog = slnLog.InContext(nameof(SolutionPostBuild));
         }
 
         public void Run()
         {
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _args.ArtifactsDir.CreateIfNotExists();
-            _args.ReleaseProjects.ForEachParallel(CopyArtifacts);
-            _args.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
-            _args.ReleaseProjects.ForEachParallel(CopyNugetPackages);
+            _host.ArtifactsDir.CreateIfNotExists();
+            _host.ReleaseProjects.ForEachParallel(CopyArtifacts);
+            _host.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
+            _host.ReleaseProjects.ForEachParallel(CopyNugetPackages);
         }
 
         private DirPath GetTargetDir(FilePath projectFile)
         {
-            return _args.ArtifactsDir.ToDir(projectFile.NameWoExtension);
+            return _host.ArtifactsDir.ToDir(projectFile.NameWoExtension);
         }
 
         private DirPath GetConfigurationDir(FilePath projectFile)
         {
-            return projectFile.Directory().ToDir("bin", _args.Configuration);
+            return projectFile.Directory().ToDir("bin", _host.Configuration);
         }
 
         private DirPath GetArtifactsSourceDir(FilePath projectFile)
@@ -147,7 +145,7 @@ namespace Lib.Build
             //check for nuget packages
             var robocopyOutput = new StringBuilder();
             var configurationDir = GetConfigurationDir(projectFile);
-            var result = Robocopy.CopyFile(configurationDir.FullName(), _args.ArtifactsDir.FullName(), "*.nupkg", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+            var result = Robocopy.CopyFile(configurationDir.FullName(), _host.ArtifactsDir.FullName(), "*.nupkg", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
             if (result.Failed)
                 throw new BuildException($"Copy nupkg packages {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
         }
