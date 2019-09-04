@@ -120,10 +120,10 @@ namespace Lib.Build
         private void AssertWebJob(string projectName, DirPath outputDir, ILogDispatcher log)
         {
             var appSettingsFile = outputDir.ToFile("appSettings.json");
-            log.Debug($"Asserting if WebJob. Looking for {appSettingsFile.FullName()}");
+            
             if (appSettingsFile.Exists() == false)
             {
-                log.Debug($"Not WebJob. {appSettingsFile.FullName()} not found");
+                log.Verbose($"Not WebJob. {appSettingsFile.FullName()} not found");
                 return;
             }
             var appSettingsRawContent = appSettingsFile.ReadAllText(IfNotExists.Mute).ToLowerInvariant();//lowercase to ignore case when accessing properties
@@ -134,7 +134,7 @@ namespace Lib.Build
 
             if (string.IsNullOrWhiteSpace(webJob))
             {
-                log.Debug($"Not WebJob. Property 'webjob' not found in {appSettingsFile.FullName()}");
+                log.Verbose($"Not WebJob. Property 'webjob' not found in {appSettingsFile.FullName()}");
                 return;
             }
             log.Information($"WebJob found: {webJob}");
