@@ -48,7 +48,6 @@ namespace Lib.Build
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
             _host.ReleaseProjects.ForEachParallel(CopyArtifacts);
             _host.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
-            _host.ReleaseProjects.ForEachParallel(CopyNugetPackages);
 
             if (_host.PreBuildCallbacks.Any())
             {
@@ -157,16 +156,6 @@ namespace Lib.Build
                 dir.CopyTo(webJobTargetDir);
                 dir.DeleteIfExists();
             });
-        }
-
-        private void CopyNugetPackages(FilePath projectFile)
-        {
-            //check for nuget packages
-            var robocopyOutput = new StringBuilder();
-            var configurationDir = GetConfigurationDir(projectFile);
-            var result = Robocopy.CopyFile(configurationDir.FullName(), _host.ArtifactsDir.FullName(), "*.nupkg", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
-            if (result.Failed)
-                throw new BuildException($"Copy nupkg packages {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
         }
     }
 }
