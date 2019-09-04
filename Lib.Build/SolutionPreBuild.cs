@@ -29,7 +29,7 @@ namespace Lib.Build
             _host.ArtifactsDir.CreateIfNotExists();
 
             //add csproj bin dirs 
-            var csprojBinDirs = _host.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories);
+            var csprojBinDirs = _host.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
             csprojBinDirs.ForEachParallel(CleanDir);
 
             if (_host.PreBuildCallbacks.Any())
@@ -37,7 +37,7 @@ namespace Lib.Build
                 _slnLog.Information($"Solution PreBuild callbacks found.");
                 foreach (var solutionPreBuildCallback in _host.PreBuildCallbacks)
                 {
-                    _slnLog.Verbose($"Invoking {solutionPreBuildCallback.FullName()}");
+                    _slnLog.Verbose($"Invoking {solutionPreBuildCallback.FullName()}{Environment.NewLine}{solutionPreBuildCallback.ReadAllText()}");
                     await LongRunningOperations.StartAsync(solutionPreBuildCallback.Name, () =>
                             {
                                 PowerShellCli.Run(_slnLog, new PowerShellCmdlet($"& \"{solutionPreBuildCallback.FullName()}\"")

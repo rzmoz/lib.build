@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -54,7 +55,7 @@ namespace Lib.Build
                 _slnLog.Information($"Solution PostBuild callbacks found.");
                 foreach (var solutionPostBuildCallback in _host.PostBuildCallbacks)
                 {
-                    _slnLog.Verbose($"Invoking {solutionPostBuildCallback.FullName()}");
+                    _slnLog.Verbose($"Invoking {solutionPostBuildCallback.FullName()}{Environment.NewLine}{solutionPostBuildCallback.ReadAllText()}");
                     await LongRunningOperations.StartAsync(solutionPostBuildCallback.Name, () =>
                         {
                             PowerShellCli.Run(_slnLog, new PowerShellCmdlet($"& \"{solutionPostBuildCallback.FullName()}\"")
@@ -97,7 +98,7 @@ namespace Lib.Build
             var releaseTargetDir = GetTargetDir(projectFile);
             var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
 
-            projectLog.Debug($"Copying build artifacts for {releaseTargetDir.Name}");
+            projectLog.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()}");
             var robocopyOutput = new StringBuilder();
             var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
 

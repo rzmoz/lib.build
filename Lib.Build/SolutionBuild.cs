@@ -33,9 +33,9 @@ namespace Lib.Build
                 var version = _host.Version ?? GetVersionFromGit(_host.SolutionDir);
                 _host.ReleaseProjects.ForEachParallel(csproj => UpdateVersion(csproj, version));
 
-                _slnLog.Debug($"Looking for Solution files in {_host.SolutionDir}");
+                _slnLog.Verbose($"Looking for Solution files in {_host.SolutionDir}");
                 var solutionFiles = _host.SolutionDir.EnumerateFiles("*.sln").ToList();
-                _slnLog.Debug($"Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
+                _slnLog.Debug($"Solution Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
 
                 foreach (var solutionFile in solutionFiles)
                 {
@@ -80,7 +80,7 @@ namespace Lib.Build
         private void UpdateVersion(FilePath projectFile, SemVersion version)
         {
             var tmpFile = GetTempFilePath(projectFile);
-            _slnLog.Debug($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");
+            _slnLog.Verbose($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");
             projectFile.CopyTo(tmpFile, overwrite: true);
 
             var projectXml = projectFile.ReadAllText();
@@ -92,7 +92,7 @@ namespace Lib.Build
             EnsureNodeWithValue(propertyGroupElement, "Version", version.SemVer20String);
             EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.SemVer10String);
             EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.SemVer10String);
-            _slnLog.Debug($"Updating {projectFile.Name.Highlight()} to {version.SemVer20String.Highlight()}");
+            _slnLog.Debug($"Patching version {version.SemVer20String.Highlight()} to {projectFile.Name.Highlight()}");
             using (var writer = new StreamWriter(projectFile.FullName()))
             using (var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true }))
             {

@@ -71,15 +71,26 @@ namespace Lib.Build
 
         private void ResolveCallbacks()
         {
-            _initLog.Information($"Resolving Solution Callbacks");
+            _initLog.Information($"Resolving Solution PreBuild Callbacks");
+            _initLog.Debug($"{nameof(_host.PreBuildCallbackFilter)} : {_host.PreBuildCallbackFilter}");
+
             _host.PreBuildCallbacks = _host.SolutionDir.EnumerateFiles(_host.PreBuildCallbackFilter, SearchOption.AllDirectories).ToList();
+
+
+            if (_host.PreBuildCallbacks.Any())
+                foreach (var callback in _host.PreBuildCallbacks)
+                    _initLog.Debug($"Solution {nameof(_host.PreBuildCallbacks)} found: {callback.FullName().Highlight()}");
+            else
+                _initLog.Debug($"No Solution {nameof(_host.PreBuildCallbacks)} found");
+
+            _initLog.Information($"Resolving Solution PostBuild Callbacks");
+            _initLog.Debug($"{nameof(_host.PostBuildCallbackFilter)} : {_host.PostBuildCallbackFilter}");
             _host.PostBuildCallbacks = _host.SolutionDir.EnumerateFiles(_host.PostBuildCallbackFilter, SearchOption.AllDirectories).ToList();
-
-            foreach (var callback in _host.PreBuildCallbacks)
-                _initLog.Debug($"Solution PreBuild callback found: {callback.FullName()}");
-
-            foreach (var callback in _host.PostBuildCallbacks)
-                _initLog.Debug($"Solution PostBuild callback found: {callback.FullName()}");
+            if (_host.PostBuildCallbacks.Any())
+                foreach (var callback in _host.PostBuildCallbacks)
+                    _initLog.Debug($"Solution {nameof(_host.PostBuildCallbacks)} found: {callback.FullName().Highlight()}");
+            else
+                _initLog.Debug($"No Solution {nameof(_host.PostBuildCallbacks)} found");
         }
 
 
@@ -89,9 +100,11 @@ namespace Lib.Build
             var releaseProjects = _host.SolutionDir.EnumerateFiles(_host.ReleaseProjectFilter, SearchOption.AllDirectories).ToList();
             _host.TestProjects = _host.SolutionDir.EnumerateFiles(_host.TestProjectFilter, SearchOption.AllDirectories).ToList();
 
+            if (_host.TestProjects.Any())
+                _initLog.Information($"Test projects found");
             foreach (var testProject in _host.TestProjects)
             {
-                _initLog.Debug($"Test project found: {testProject.FullName()}");
+                _initLog.Debug($"{testProject.FullName()}");
                 for (var i = 0; i < releaseProjects.Count; i++)
                 {
                     if (releaseProjects[i].FullName().Equals(testProject.FullName()))
@@ -103,8 +116,10 @@ namespace Lib.Build
             }
             _host.ReleaseProjects = releaseProjects;
 
+            if (_host.ReleaseProjects.Any())
+                _initLog.Information($"Release projects found");
             foreach (var releaseProject in _host.ReleaseProjects)
-                _initLog.Debug($"Release project found: {releaseProject.FullName()}");
+                _initLog.Debug($"{releaseProject.FullName()}");
 
             if (_host.ReleaseProjects.Count == 0)
                 throw new BuildException($"No release projects found under {_host.SolutionDir.FullName()} with release filter: {_host.ReleaseProjectFilter}");
