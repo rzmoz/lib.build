@@ -19,7 +19,9 @@ namespace Lib.Build
             {"config", nameof(Configuration)},
             {"sln", nameof(SolutionDir)},
             {"slnDir", nameof(SolutionDir)},
+            {"release", nameof(ReleaseProjectFilter)},
             {"releaseFilter", nameof(ReleaseProjectFilter)},
+            {"test", nameof(TestProjectFilter)},
             {"testFilter", nameof(TestProjectFilter)}
         };
 

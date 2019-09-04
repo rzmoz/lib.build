@@ -129,12 +129,12 @@ namespace Lib.Build
             webJobFiles.ForEachParallel(f =>
             {
                 var targetFile = webJobTargetDir.ToFile(f.Name);
-                log.Debug($"F: Moving {f.FullName()} to {targetFile.FullName() }");
+                log.Debug($"File: Moving {f.FullName()} to {targetFile.FullName() }");
                 return f.MoveTo(targetFile);
             });
             webJobDirs.ForEachParallel(dir =>
             {
-                log.Debug($"D: Moving {dir.FullName()} to {webJobTargetDir.FullName()}");
+                log.Debug($"Dir: Moving {dir.FullName()} to {webJobTargetDir.FullName()}");
                 dir.CopyTo(webJobTargetDir);
                 dir.DeleteIfExists();
             });
