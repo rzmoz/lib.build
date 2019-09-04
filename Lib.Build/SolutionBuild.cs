@@ -61,7 +61,7 @@ namespace Lib.Build
             var gitPath = solutionDir.ToDir(".git").FullName();
             _slnLog.Debug($"Trying to resolve version from git in {gitPath}");
 
-            var gitVersions = PowerShellCli.Run(_slnLog, $"git --git-dir=\"{gitPath}\" tag -l v*");
+            var gitVersions = PowerShellCli.Run(_slnLog, $"git --git-dir=\"{gitPath}\" tag -l *");
 
             if (gitVersions.Any() == false)
             {
