@@ -22,7 +22,11 @@ namespace Lib.Build
             {"release", nameof(ReleaseProjectFilter)},
             {"releaseFilter", nameof(ReleaseProjectFilter)},
             {"test", nameof(TestProjectFilter)},
-            {"testFilter", nameof(TestProjectFilter)}
+            {"testFilter", nameof(TestProjectFilter)},
+            {"preBuild", nameof(PreBuildCallbackFilter)},
+            {"preBuildFilter", nameof(PreBuildCallbackFilter)},
+            {"postBuild", nameof(PostBuildCallbackFilter)},
+            {"postBuildFilter", nameof(PostBuildCallbackFilter)},
         };
 
         public BuildHost(string[] args, IConfigurationRoot config, ILogDispatcher log) : base(args, config, log)
@@ -31,6 +35,8 @@ namespace Lib.Build
             SolutionDir = base[nameof(SolutionDir), 0]?.ToDir();
             ReleaseProjectFilter = base[nameof(ReleaseProjectFilter)] ?? "*.csproj";
             TestProjectFilter = base[nameof(TestProjectFilter)] ?? "*.tests.csproj";
+            PreBuildCallbackFilter = base[nameof(PreBuildCallbackFilter)] ?? "*.PreBuild.Callback.ps1";
+            PostBuildCallbackFilter = base[nameof(PostBuildCallbackFilter)] ?? "*.PostBuild.Callback.ps1";
 
             if (SolutionDir == null) return;
             if (SolutionDir.Exists() || Path.IsPathRooted(SolutionDir.RawPath))
@@ -51,8 +57,12 @@ namespace Lib.Build
 
         public string ReleaseProjectFilter { get; }
         public string TestProjectFilter { get; }
+        public string PreBuildCallbackFilter { get; }
+        public string PostBuildCallbackFilter { get; }
 
         public IReadOnlyList<FilePath> ReleaseProjects { get; set; } = new List<FilePath>();
         public IReadOnlyList<FilePath> TestProjects { get; set; } = new List<FilePath>();
+        public IReadOnlyList<FilePath> PreBuildCallbacks { get; set; } = new List<FilePath>();
+        public IReadOnlyList<FilePath> PostBuildCallbacks { get; set; } = new List<FilePath>();
     }
 }

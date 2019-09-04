@@ -1,9 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>build</ToolCommandName>
     <Authors>rzmoz</Authors>
     <Product>Lib.Build</Product>
     <Description>Builds Visual Studio 2017+ solutions and produces easy to consume release artifacts</Description>
@@ -18,9 +16,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.1.0" />
+    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.1.2" />
     <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.1.2" />
-    <PackageReference Include="DotNet.Basics.PowerShell" Version="7.0.0-beta.1.0" />
+    <PackageReference Include="DotNet.Basics.PowerShell" Version="7.0.0-beta.1.3" />
   </ItemGroup>
 
 </Project>

@@ -14,14 +14,15 @@ namespace Lib.Build
             var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildHost.KeyMappings))
                 .BuildCustomHost((args, config, log) => new BuildHost(args.ToArray(), config, log));
 
-            return await host.RunAsync("Build", (config, log) =>
+            return await host.RunAsync("Build",async  (config, log) =>
             {
                 var artifactsBuilder = new ArtifactsBuilder(host, log);
                 artifactsBuilder.Init();
-                artifactsBuilder.PreBuild.Run();
+                
+                await artifactsBuilder.PreBuild.RunAsync().ConfigureAwait(false);
                 artifactsBuilder.Build.Run();
-                artifactsBuilder.PostBuild.Run();
-                return Task.CompletedTask;
+                await artifactsBuilder.PostBuild.RunAsync().ConfigureAwait(false);
+
             }).ConfigureAwait(false);
         }
     }

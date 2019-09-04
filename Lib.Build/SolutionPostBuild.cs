@@ -2,9 +2,11 @@
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
+using DotNet.Basics.PowerShell;
 using DotNet.Basics.Sys;
 using Newtonsoft.Json.Linq;
 
@@ -41,13 +43,30 @@ namespace Lib.Build
             _slnLog = slnLog.InContext(nameof(SolutionPostBuild));
         }
 
-        public void Run()
+        public async Task RunAsync()
         {
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _host.ArtifactsDir.CreateIfNotExists();
             _host.ReleaseProjects.ForEachParallel(CopyArtifacts);
             _host.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
             _host.ReleaseProjects.ForEachParallel(CopyNugetPackages);
+
+            if (_host.PreBuildCallbacks.Any())
+            {
+                _slnLog.Information($"Solution PostBuild callbacks found.");
+                foreach (var solutionPostBuildCallback in _host.PostBuildCallbacks)
+                {
+                    _slnLog.Verbose($"Invoking {solutionPostBuildCallback.FullName()}");
+                    await LongRunningOperations.StartAsync(solutionPostBuildCallback.Name, () =>
+                        {
+                            PowerShellCli.Run(_slnLog, new PowerShellCmdlet($"& \"{solutionPostBuildCallback.FullName()}\"")
+                                .WithParam("slnDir", _host.SolutionDir.FullName())
+                                .WithParam("artifactsDir", _host.ArtifactsDir.FullName())
+                                .WithVerbose()
+                            );
+                            return Task.CompletedTask;
+                        }).ConfigureAwait(false);
+                }
+            }
         }
 
         private DirPath GetTargetDir(FilePath projectFile)

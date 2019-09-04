@@ -32,12 +32,15 @@ namespace Lib.Build
             _initLog.Debug($"{nameof(_host.ArtifactsDir).Highlight()}: {_host.ArtifactsDir?.FullName()}");
             _initLog.Debug($"{nameof(_host.ReleaseProjectFilter).Highlight()}: {_host.ReleaseProjectFilter}");
             _initLog.Debug($"{nameof(_host.TestProjectFilter).Highlight()}: {_host.TestProjectFilter}");
+            _initLog.Debug($"{nameof(_host.PreBuildCallbackFilter).Highlight()}: {_host.PreBuildCallbackFilter}");
+            _initLog.Debug($"{nameof(_host.PostBuildCallbackFilter).Highlight()}: {_host.PostBuildCallbackFilter}");
             _initLog.Debug($"{nameof(_host.Publish).Highlight()}: {_host.Publish}");
 
             if (_host.SolutionDir.Exists() == false)
                 throw new DirectoryNotFoundException($"Solution Dir not found: {_host.SolutionDir.FullName()}");
 
             ResolveProjects();
+            ResolveCallbacks();
         }
 
         private DirPath VerifySolutionDir(DirPath currentDir)
@@ -65,6 +68,20 @@ namespace Lib.Build
 
             throw new BuildException($"No solution files found in {".".ToDir().FullName()} or any parent dir");
         }
+
+        private void ResolveCallbacks()
+        {
+            _initLog.Information($"Resolving Solution Callbacks");
+            _host.PreBuildCallbacks = _host.SolutionDir.EnumerateFiles(_host.PreBuildCallbackFilter, SearchOption.AllDirectories).ToList();
+            _host.PostBuildCallbacks = _host.SolutionDir.EnumerateFiles(_host.PostBuildCallbackFilter, SearchOption.AllDirectories).ToList();
+
+            foreach (var callback in _host.PreBuildCallbacks)
+                _initLog.Debug($"Solution PreBuild callback found: {callback.FullName()}");
+
+            foreach (var callback in _host.PostBuildCallbacks)
+                _initLog.Debug($"Solution PostBuild callback found: {callback.FullName()}");
+        }
+
 
         private void ResolveProjects()
         {

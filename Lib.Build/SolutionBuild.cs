@@ -61,7 +61,7 @@ namespace Lib.Build
             var gitPath = solutionDir.ToDir(".git").FullName();
             _slnLog.Debug($"Trying to resolve version from git in {gitPath}");
 
-            var gitVersions = PowerShellCli.RunScript($"git --git-dir=\"{gitPath}\" tag -l v*");
+            var gitVersions = PowerShellCli.Run(_slnLog, $"git --git-dir=\"{gitPath}\" tag -l v*");
 
             if (gitVersions.Any() == false)
             {
@@ -70,7 +70,7 @@ namespace Lib.Build
             }
 
             var latestVersion = gitVersions.Select(v => new SemVersion(v)).Max();
-            var shortHash = PowerShellCli.RunScript($"git --git-dir=\"{gitPath }\" log --pretty=format:'%h' -n 1").First().ToString();
+            var shortHash = PowerShellCli.Run(_slnLog, $"git --git-dir=\"{gitPath }\" log --pretty=format:'%h' -n 1").First().ToString();
 
             latestVersion.Metadata += shortHash;
             _slnLog.Debug($"Version resolved from git to {latestVersion.SemVer20String.Highlight()}");
