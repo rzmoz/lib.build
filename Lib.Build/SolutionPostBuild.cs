@@ -96,19 +96,23 @@ namespace Lib.Build
         private void CopyArtifacts(FilePath projectFile)
         {
             var releaseTargetDir = GetTargetDir(projectFile);
-            var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
 
-            projectLog.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()}");
+
+            _slnLog.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()} to {releaseTargetDir.FullName()}");
             var robocopyOutput = new StringBuilder();
             var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
 
+            var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
+
             if (_dotNetFrameworkRegex.IsMatch(artifactsSourceDir.Name))
             {
-                projectLog.Debug($"{projectFile.NameWoExtension} is .NET Framework");
+                _slnLog.Debug($"{projectFile.NameWoExtension.Highlight()} is .NET Framework");
                 var binDir = artifactsSourceDir.Add("bin");
                 Robocopy.MoveContent(artifactsSourceDir.FullName(), binDir.FullName(), "*.dll", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
                 Robocopy.MoveContent(artifactsSourceDir.FullName(), binDir.FullName(), "*.pdb", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
             }
+            else
+                _slnLog.Debug($"{projectFile.NameWoExtension.Highlight()} is .NET Core");
 
             AssertWebJob(projectFile.NameWoExtension, artifactsSourceDir, projectLog);
 
@@ -121,7 +125,7 @@ namespace Lib.Build
         private void AssertWebJob(string projectName, DirPath outputDir, ILogDispatcher log)
         {
             var appSettingsFile = outputDir.ToFile("appSettings.json");
-            
+
             if (appSettingsFile.Exists() == false)
             {
                 log.Verbose($"Not WebJob. {appSettingsFile.FullName()} not found");

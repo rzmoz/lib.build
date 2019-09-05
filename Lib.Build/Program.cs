@@ -13,7 +13,6 @@ namespace Lib.Build
             args.PauseIfDebug();
 #endif
             var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildHost.KeyMappings))
-                .WithLogging(config => config.AddConsole())
                 .BuildCustomHost((args, config, log) => new BuildHost(args.ToArray(), config, log));
 
             return await host.RunAsync("Build", async (config, log) =>
