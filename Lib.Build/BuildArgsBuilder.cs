@@ -56,7 +56,7 @@ namespace Lib.Build
             };
             args.ReleaseArtifactsDir = ResolveReleaseArtifactsDir(config, args.SolutionDir);
             args.TestArtifactsDir = ResolveTestArtifactsDir(config, args.SolutionDir);
-            args.Version = ResolveVersion(args.SolutionDir);
+            args.Version = ResolveVersion(config[nameof(BuildArgs.Version)], args.SolutionDir);
             args.TestProjects = ResolveFiles(args.SolutionDir, config[_testProjectFilterKey] ?? "*.tests.csproj", "Test Projects");
             args.ReleaseProjects = ResolveReleaseProjects(args.SolutionDir, config[_releaseProjectFilterKey] ?? "*.csproj", args.TestProjects);
 
@@ -96,10 +96,21 @@ namespace Lib.Build
 
             return releaseProjects;
         }
-        private SemVersion ResolveVersion(DirPath slnDir)
+        private SemVersion ResolveVersion(string version, DirPath slnDir)
         {
             var gitPath = slnDir.ToDir(".git").FullName();
-            _log.Verbose($"Trying to resolve version from git in {gitPath}");
+            var shortHash = PowerShellCli.Run(_log, $"git --git-dir=\"{gitPath}\" log --pretty=format:'%h' -n 1").First().ToString();
+
+            if (string.IsNullOrEmpty(version) == false)
+            {
+                var literalVersion = new SemVersion(version);
+                if (string.IsNullOrEmpty(literalVersion.Metadata))
+                    literalVersion.Metadata += shortHash;
+                _log.Verbose($"Version resolved to {literalVersion.SemVer20String.Highlight()}");
+                return literalVersion;
+            }
+
+            _log.Verbose($"Version not set. Resolving version from git tags in {gitPath}");
 
             var gitVersions = PowerShellCli.Run(_log, $"git --git-dir=\"{gitPath}\" tag -l *");
 
@@ -113,7 +124,7 @@ namespace Lib.Build
             }
 
             var latestVersion = gitVersions.Select(v => new SemVersion(v)).Max();
-            var shortHash = PowerShellCli.Run(_log, $"git --git-dir=\"{gitPath }\" log --pretty=format:'%h' -n 1").First().ToString();
+
 
             latestVersion.Metadata += shortHash;
             _log.Verbose($"Version resolved from git to {latestVersion.SemVer20String.Highlight()}");

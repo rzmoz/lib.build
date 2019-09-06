@@ -69,7 +69,7 @@ namespace Lib.Build
             EnsureNodeWithValue(propertyGroupElement, "Version", version.SemVer20String);
             EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.SemVer10String);
             EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.SemVer10String);
-            _slnLog.Debug($"Patching version {version.SemVer20String.Highlight()} to {projectFile.Name.Highlight()}");
+            _slnLog.Debug($"Patching {projectFile.Name.Highlight()} with version {version.SemVer20String.Highlight()}");
             using (var writer = new StreamWriter(projectFile.FullName()))
             using (var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true }))
             {

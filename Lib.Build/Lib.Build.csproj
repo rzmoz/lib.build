@@ -1,7 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>    
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <Authors>rzmoz</Authors>
     <Product>Lib.Build</Product>
     <PackAsTool>true</PackAsTool>
@@ -15,12 +16,13 @@
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>3.0.0-rc.5+94275de</Version>
+    <AssemblyVersion>3.0.0</AssemblyVersion>
+    <FileVersion>3.0.0</FileVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.2.4" />
     <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.2.4" />
     <PackageReference Include="DotNet.Basics.PowerShell" Version="7.0.0-beta.1.3" />
   </ItemGroup>
-
 </Project>
