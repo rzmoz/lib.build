@@ -6,21 +6,20 @@ using System.Xml.XPath;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
-using DotNet.Basics.PowerShell;
 using DotNet.Basics.Sys;
 
 namespace Lib.Build
 {
     public class SolutionBuild
     {
-        private readonly BuildHost _host;
+        private readonly BuildArgs _args;
         private readonly ILogDispatcher _slnLog;
 
         private const string _tempFileSuffix = ".temp";
 
-        public SolutionBuild(BuildHost host, ILogDispatcher slnLog)
+        public SolutionBuild(BuildArgs args, ILogDispatcher slnLog)
         {
-            _host = host;
+            _args = args;
             _slnLog = slnLog.InContext(nameof(SolutionBuild));
         }
 
@@ -30,18 +29,17 @@ namespace Lib.Build
 
             try
             {
-                var version = _host.Version ?? GetVersionFromGit(_host.SolutionDir);
-                _host.ReleaseProjects.ForEachParallel(csproj => UpdateVersion(csproj, version));
+                _args.ReleaseProjects.ForEachParallel(csproj => PatchVersion(csproj, _args.Version));
 
-                _slnLog.Verbose($"Looking for Solution files in {_host.SolutionDir}");
-                var solutionFiles = _host.SolutionDir.EnumerateFiles("*.sln").ToList();
+                _slnLog.Verbose($"Looking for Solution files in {_args.SolutionDir}");
+                var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
                 _slnLog.Debug($"Solution Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
 
                 foreach (var solutionFile in solutionFiles)
                 {
-                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {_host.Configuration} --force --verbosity quiet";
-                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {_host.Configuration} --no-incremental --verbosity quiet";
-                    var action = _host.Publish ? publishAction : buildAction;
+                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --force --verbosity quiet";
+                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --no-incremental --verbosity quiet";
+                    var action = _args.Publish ? publishAction : buildAction;
 
                     _slnLog.Information(action.Highlight());
 
@@ -52,32 +50,11 @@ namespace Lib.Build
             }
             finally
             {
-                _host.ReleaseProjects.ForEachParallel(RevertVersion);
+                _args.ReleaseProjects.ForEachParallel(RevertVersion);
             }
         }
-
-        private SemVersion GetVersionFromGit(DirPath solutionDir)
-        {
-            var gitPath = solutionDir.ToDir(".git").FullName();
-            _slnLog.Debug($"Trying to resolve version from git in {gitPath}");
-
-            var gitVersions = PowerShellCli.Run(_slnLog, $"git --git-dir=\"{gitPath}\" tag -l *");
-
-            if (gitVersions.Any() == false)
-            {
-                _slnLog.Warning($"No tags found in git repo in {gitPath.Highlight()}");
-                return new SemVersion(0, 0, 0);
-            }
-
-            var latestVersion = gitVersions.Select(v => new SemVersion(v)).Max();
-            var shortHash = PowerShellCli.Run(_slnLog, $"git --git-dir=\"{gitPath }\" log --pretty=format:'%h' -n 1").First().ToString();
-
-            latestVersion.Metadata += shortHash;
-            _slnLog.Debug($"Version resolved from git to {latestVersion.SemVer20String.Highlight()}");
-            return latestVersion;
-        }
-
-        private void UpdateVersion(FilePath projectFile, SemVersion version)
+        
+        private void PatchVersion(FilePath projectFile, SemVersion version)
         {
             var tmpFile = GetTempFilePath(projectFile);
             _slnLog.Verbose($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");

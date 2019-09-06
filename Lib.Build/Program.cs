@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using DotNet.Basics.Cli;
-using DotNet.Basics.Cli.ConsoleOutput;
 
 namespace Lib.Build
 {
@@ -12,19 +10,22 @@ namespace Lib.Build
 #if DEBUG
             args.PauseIfDebug();
 #endif
-            var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildHost.KeyMappings))
-                .BuildCustomHost((args, config, log) => new BuildHost(args.ToArray(), config, log));
+            //init host
+            var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildArgsBuilder.KeyMappings)).Build();
 
+            //init build args
+            var buildArgs = new BuildArgsBuilder(host.Log).Build(host);
+
+            //run build
             return await host.RunAsync("Build", async (config, log) =>
-             {
-                 var artifactsBuilder = new ArtifactsBuilder(host, log);
-                 artifactsBuilder.Init();
+            {
+                var callbackRunner = new CallbackRunner();
+                await new SolutionPreBuild(buildArgs, log, callbackRunner).RunAsync().ConfigureAwait(false);
+                new SolutionBuild(buildArgs, log).Run();
+                await new SolutionPostBuild(buildArgs, log, callbackRunner).RunAsync().ConfigureAwait(false);
 
-                 await artifactsBuilder.PreBuild.RunAsync().ConfigureAwait(false);
-                 artifactsBuilder.Build.Run();
-                 await artifactsBuilder.PostBuild.RunAsync().ConfigureAwait(false);
 
-             }).ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
     }
 }

@@ -15,7 +15,8 @@ namespace Lib.Build
 {
     public class SolutionPostBuild
     {
-        private readonly BuildHost _host;
+        private readonly BuildArgs _args;
+        private readonly CallbackRunner _callbackRunner;
 
         private const string _dotNetFrameworkPattern = @"^net[0-9]+$";
         private static readonly Regex _dotNetFrameworkRegex = new Regex(_dotNetFrameworkPattern, RegexOptions.IgnoreCase);
@@ -38,45 +39,32 @@ namespace Lib.Build
             "zh-Hant"
         };
 
-        public SolutionPostBuild(BuildHost host, ILogDispatcher slnLog)
+        public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog, CallbackRunner callbackRunner)
         {
-            _host = host;
+            _args = args;
+            _callbackRunner = callbackRunner;
             _slnLog = slnLog.InContext(nameof(SolutionPostBuild));
         }
 
         public async Task RunAsync()
         {
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _host.ReleaseProjects.ForEachParallel(CopyArtifacts);
-            _host.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
+            _args.ReleaseProjects.ForEachParallel(CopyArtifacts);
+            _args.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
 
-            if (_host.PreBuildCallbacks.Any())
-            {
-                _slnLog.Information($"Solution PostBuild callbacks found.");
-                foreach (var solutionPostBuildCallback in _host.PostBuildCallbacks)
-                {
-                    _slnLog.Verbose($"Invoking {solutionPostBuildCallback.FullName()}{Environment.NewLine}{solutionPostBuildCallback.ReadAllText()}");
-                    await LongRunningOperations.StartAsync(solutionPostBuildCallback.Name, () =>
-                        {
-                            PowerShellCli.Run(_slnLog, new PowerShellCmdlet($"& \"{solutionPostBuildCallback.FullName()}\"")
-                                .WithParam("slnDir", _host.SolutionDir.FullName())
-                                .WithParam("artifactsDir", _host.ArtifactsDir.FullName())
-                                .WithVerbose()
-                            );
-                            return Task.CompletedTask;
-                        }).ConfigureAwait(false);
-                }
-            }
+            await _callbackRunner
+                .InvokeCallbacksAsync(_args.PostBuildCallbacks, _args.SolutionDir, _args.ReleaseArtifactsDir, _slnLog)
+                .ConfigureAwait(false);
         }
 
         private DirPath GetTargetDir(FilePath projectFile)
         {
-            return _host.ArtifactsDir.ToDir(projectFile.NameWoExtension);
+            return _args.ReleaseArtifactsDir.ToDir(projectFile.NameWoExtension);
         }
 
         private DirPath GetConfigurationDir(FilePath projectFile)
         {
-            return projectFile.Directory().ToDir("bin", _host.Configuration);
+            return projectFile.Directory().ToDir("bin", _args.Configuration);
         }
 
         private DirPath GetArtifactsSourceDir(FilePath projectFile)

@@ -1,23 +1,23 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
-using DotNet.Basics.PowerShell;
 using DotNet.Basics.Sys;
 
 namespace Lib.Build
 {
     public class SolutionPreBuild
     {
-        private readonly BuildHost _host;
+        private readonly BuildArgs _args;
+        private readonly CallbackRunner _callbackRunner;
         private readonly ILogDispatcher _slnLog;
 
-        public SolutionPreBuild(BuildHost host, ILogDispatcher slnLog)
+        public SolutionPreBuild(BuildArgs args, ILogDispatcher slnLog, CallbackRunner callbackRunner)
         {
-            _host = host;
+            _args = args;
+            _callbackRunner = callbackRunner;
             _slnLog = slnLog.InContext(nameof(SolutionPreBuild));
         }
 
@@ -25,30 +25,16 @@ namespace Lib.Build
         {
             _slnLog.Information($"Starting {nameof(SolutionPreBuild)}");
 
-            CleanDir(_host.ArtifactsDir);
-            _host.ArtifactsDir.CreateIfNotExists();
+            CleanDir(_args.ReleaseArtifactsDir);
+            _args.ReleaseArtifactsDir.CreateIfNotExists();
 
             //add csproj bin dirs 
-            var csprojBinDirs = _host.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
+            var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
             csprojBinDirs.ForEachParallel(CleanDir);
 
-            if (_host.PreBuildCallbacks.Any())
-            {
-                _slnLog.Information($"Solution PreBuild callbacks found.");
-                foreach (var solutionPreBuildCallback in _host.PreBuildCallbacks)
-                {
-                    _slnLog.Verbose($"Invoking {solutionPreBuildCallback.FullName()}{Environment.NewLine}{solutionPreBuildCallback.ReadAllText()}");
-                    await LongRunningOperations.StartAsync(solutionPreBuildCallback.Name, () =>
-                            {
-                                PowerShellCli.Run(_slnLog, new PowerShellCmdlet($"& \"{solutionPreBuildCallback.FullName()}\"")
-                                      .WithParam("slnDir", _host.SolutionDir.FullName())
-                                      .WithParam("artifactsDir", _host.ArtifactsDir.FullName())
-                                      .WithVerbose()
-                                );
-                                return Task.CompletedTask;
-                            }).ConfigureAwait(false);
-                }
-            }
+            await _callbackRunner
+                .InvokeCallbacksAsync(_args.PreBuildCallbacks, _args.SolutionDir, _args.ReleaseArtifactsDir, _slnLog)
+                .ConfigureAwait(false);
         }
 
         private void CleanDir(DirPath dir)
