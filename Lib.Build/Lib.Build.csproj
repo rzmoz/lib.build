@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>    
     <Authors>rzmoz</Authors>
     <Product>Lib.Build</Product>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>build</ToolCommandName>
     <Description>Builds Visual Studio 2017+ solutions and produces easy to consume release artifacts</Description>
     <RepositoryUrl>https://github.com/rzmoz/lib.build</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
