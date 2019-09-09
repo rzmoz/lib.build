@@ -82,7 +82,15 @@ namespace Lib.Build
         private IReadOnlyList<FilePath> ResolveFiles(DirPath slnDir, string filter, string name)
         {
             _log.Debug($"Resolving {name} with filter : {filter}");
-            return slnDir.EnumerateFiles(filter, SearchOption.AllDirectories).ToList(); ;
+            try
+            {
+                return slnDir.EnumerateFiles(filter, SearchOption.AllDirectories).ToList(); ;
+            }
+            catch (IOException e)
+            {
+                _log.Warning($"{e.GetType().Name.RemoveSuffix("Exception")}: {e.Message} when resolving {name.Highlight()} with {filter.Highlight()}");
+                return new List<FilePath>();
+            }
         }
         private IReadOnlyList<FilePath> ResolveReleaseProjects(DirPath slnDir, string filter, IReadOnlyList<FilePath> testProjects)
         {
