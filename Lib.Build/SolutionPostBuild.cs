@@ -9,6 +9,7 @@ using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.PowerShell;
 using DotNet.Basics.Sys;
+using DotNet.Basics.Tasks.Repeating;
 using Newtonsoft.Json.Linq;
 
 namespace Lib.Build
@@ -140,13 +141,30 @@ namespace Lib.Build
             webJobFiles.ForEachParallel(f =>
             {
                 var targetFile = webJobTargetDir.ToFile(f.Name);
-                log.Debug($"File: Moving {f.FullName()} to {targetFile.FullName() }");
-                return f.MoveTo(targetFile);
+
+                log.Verbose($"File: Moving {f.FullName()} to {targetFile.FullName() }");
+                Repeat.Task(() => f.MoveTo(targetFile))
+                    .WithOptions(o =>
+                    {
+                        o.MaxTries = 10;
+                        o.RetryDelay = 1.Seconds();
+                        o.Finally = () => log.Debug($"File: Moved {f.FullName()} to {targetFile.FullName() }");
+                    }).UntilNoExceptions();
+
+                return targetFile;
             });
             webJobDirs.ForEachParallel(dir =>
             {
-                log.Debug($"Dir: Moving {dir.FullName()} to {webJobTargetDir.FullName()}");
-                dir.CopyTo(webJobTargetDir);
+                log.Verbose($"Dir: Moving {dir.FullName()} to {webJobTargetDir.FullName()}");
+
+                Repeat.Task(() => dir.CopyTo(webJobTargetDir))
+                    .WithOptions(o =>
+                    {
+                        o.MaxTries = 10;
+                        o.RetryDelay = 1.Seconds();
+                        o.Finally = () => log.Debug($"Dir: Moved {dir.FullName()} to {webJobTargetDir.FullName()}");
+                    }).UntilNoExceptions();
+                
                 dir.DeleteIfExists();
             });
         }
