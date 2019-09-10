@@ -5,6 +5,7 @@ using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
+using DotNet.Basics.Tasks.Repeating;
 
 namespace Lib.Build
 {
@@ -42,7 +43,12 @@ namespace Lib.Build
             _slnLog.Debug($"Cleaning {dir.FullName()}");
             try
             {
-                dir.CleanIfExists();
+                Repeat.Task(() => dir.CleanIfExists())
+                    .WithOptions(o =>
+                    {
+                        o.MaxTries = 3;
+                        o.RetryDelay = 3.Seconds();
+                    }).UntilNoExceptions();
             }
             catch (DirectoryNotFoundException)
             {

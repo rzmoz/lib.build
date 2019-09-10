@@ -60,8 +60,8 @@ namespace Lib.Build
             args.TestProjects = ResolveFiles(args.SolutionDir, config[_testProjectFilterKey] ?? "*.tests.csproj", "Test Projects");
             args.ReleaseProjects = ResolveReleaseProjects(args.SolutionDir, config[_releaseProjectFilterKey] ?? "*.csproj", args.TestProjects);
 
-            args.PreBuildCallbacks = ResolveFiles(args.SolutionDir, config[_preBuildCallbackFilterKey] ?? "*.PreBuild.Callback.ps1", nameof(args.PreBuildCallbacks));
-            args.PostBuildCallbacks = ResolveFiles(args.SolutionDir, config[_postBuildCallbackFilterKey] ?? "*.PostBuild.Callback.ps1", nameof(args.PostBuildCallbacks));
+            args.PreBuildCallbacks = ResolveFiles(args.SolutionDir, config[_preBuildCallbackFilterKey] ?? "*XXX.PreBuild.Callback.ps1", nameof(args.PreBuildCallbacks));
+            args.PostBuildCallbacks = ResolveFiles(args.SolutionDir, config[_postBuildCallbackFilterKey] ?? "*XXX.PostBuild.Callback.ps1", nameof(args.PostBuildCallbacks));
 
             _log.Information($"{nameof(BuildArgs)} initialized with:");
             _log.Debug($"{nameof(BuildArgs.Configuration)}: {args.Configuration.Highlight()}");
