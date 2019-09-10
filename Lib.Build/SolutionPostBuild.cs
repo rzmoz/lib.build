@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DotNet.Basics.Collections;
@@ -49,8 +48,6 @@ namespace Lib.Build
         public void Run()
         {
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _slnLog.Information($"Asserting Target Frameworks");
-            _args.ReleaseProjects.ForEachParallel(AssertDotNetFrameworkOutput);
             _args.ReleaseProjects.ForEachParallel(CleanLanguageBuildArtifacts);
             _slnLog.Information($"Asserting Web Jobs");
             _args.ReleaseProjects.ForEachParallel(AssertWebJob);
@@ -87,27 +84,6 @@ namespace Lib.Build
         {
             var outputDir = GetArtifactsSourceDir(projectFile);
             _languageDirs.ForEachParallel(dir => outputDir.ToDir(dir).DeleteIfExists());
-        }
-
-        private void AssertDotNetFrameworkOutput(FilePath projectFile)
-        {
-            var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
-            var targetFramework = $"Not detected: {artifactsSourceDir.Name}";
-
-            if (_dotNetFrameworkRegex.IsMatch(artifactsSourceDir.Name))
-            {
-                targetFramework = ".NET Framework";
-                var binDir = artifactsSourceDir.Add("bin");
-
-                artifactsSourceDir.EnumerateFiles("*.dll").MoveTo(binDir, true, true);
-                artifactsSourceDir.EnumerateFiles("*.pdb").MoveTo(binDir, true, true);
-            }
-            else if (_dotNetStandardRegex.IsMatch(artifactsSourceDir.Name))
-                targetFramework = ".NET Framework";
-            else if (_dotNetCoreAppRegex.IsMatch(artifactsSourceDir.Name))
-                targetFramework = ".NET Core App";
-
-            _slnLog.Debug($"Target Framework for {projectFile.NameWoExtension.Highlight()} is {targetFramework}");
         }
 
         private void CopyReleaseArtifacts(FilePath projectFile)
