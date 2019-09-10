@@ -88,7 +88,7 @@ namespace Lib.Build
 
 
             _slnLog.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()} to {releaseTargetDir.FullName()}");
-            var robocopyOutput = new StringBuilder();
+
             var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
 
             var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
@@ -97,18 +97,44 @@ namespace Lib.Build
             {
                 _slnLog.Debug($"{projectFile.NameWoExtension.Highlight()} is .NET Framework");
                 var binDir = artifactsSourceDir.Add("bin");
-                Robocopy.MoveContent(artifactsSourceDir.FullName(), binDir.FullName(), "*.dll", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
-                Robocopy.MoveContent(artifactsSourceDir.FullName(), binDir.FullName(), "*.pdb", writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
+
+                artifactsSourceDir.EnumerateFiles("*.dll").ForEachParallel(f =>
+                {
+                    Repeat.Task(() => f.MoveTo(binDir.ToFile(f.Name)))
+                        .WithOptions(o =>
+                        {
+                            o.MaxTries = 10;
+                            o.RetryDelay = 1.Seconds();
+                            o.Finally = () =>
+                                _slnLog.Debug($"File: Moved {f.FullName()} to {binDir.ToFile(f.Name).FullName()}");
+                        }).UntilNoExceptions();
+                });
+
+                artifactsSourceDir.EnumerateFiles("*.pdb").ForEachParallel(f =>
+                {
+                    Repeat.Task(() => f.MoveTo(binDir.ToFile(f.Name)))
+                        .WithOptions(o =>
+                        {
+                            o.MaxTries = 10;
+                            o.RetryDelay = 1.Seconds();
+                            o.Finally = () =>
+                                _slnLog.Debug($"File: Moved {f.FullName()} to {binDir.ToFile(f.Name).FullName()}");
+                        }).UntilNoExceptions();
+                });
             }
             else
                 _slnLog.Debug($"{projectFile.NameWoExtension.Highlight()} is .NET Core");
 
             AssertWebJob(projectFile.NameWoExtension, artifactsSourceDir, projectLog);
 
-            var result = Robocopy.CopyDir(artifactsSourceDir.FullName(), releaseTargetDir.FullName(), includeSubFolders: true, writeOutput: output => robocopyOutput.Append(output), writeError: error => robocopyOutput.Append(error));
-            if (result.Failed)
-                throw new BuildException($"Copy artifacts for {projectFile.Name} failed with: {result.ExitCode}|{result.StatusMessage}\r\n{robocopyOutput}");
-
+            try
+            {
+                artifactsSourceDir.CopyTo(releaseTargetDir, true);
+            }
+            catch (Exception)
+            {
+                throw new BuildException($"Copy artifacts for {projectFile.Name} failed with");
+            }
         }
 
         private void AssertWebJob(string projectName, DirPath outputDir, ILogDispatcher log)
@@ -135,38 +161,8 @@ namespace Lib.Build
 
             var webJobTargetDir = outputDir.Add("app_data", "jobs", webJob, projectName);
             webJobTargetDir.DeleteIfExists();//must be deleted before we scan for dirs
-            var webJobFiles = outputDir.EnumerateFiles().ToList();
-            var webJobDirs = outputDir.EnumerateDirectories().ToList();//must iterated before we scan for dirs
-            webJobTargetDir.CreateIfNotExists();
-            webJobFiles.ForEachParallel(f =>
-            {
-                var targetFile = webJobTargetDir.ToFile(f.Name);
-
-                log.Verbose($"File: Moving {f.FullName()} to {targetFile.FullName() }");
-                Repeat.Task(() => f.MoveTo(targetFile))
-                    .WithOptions(o =>
-                    {
-                        o.MaxTries = 10;
-                        o.RetryDelay = 1.Seconds();
-                        o.Finally = () => log.Debug($"File: Moved {f.FullName()} to {targetFile.FullName() }");
-                    }).UntilNoExceptions();
-
-                return targetFile;
-            });
-            webJobDirs.ForEachParallel(dir =>
-            {
-                log.Verbose($"Dir: Moving {dir.FullName()} to {webJobTargetDir.FullName()}");
-
-                Repeat.Task(() => dir.CopyTo(webJobTargetDir))
-                    .WithOptions(o =>
-                    {
-                        o.MaxTries = 10;
-                        o.RetryDelay = 1.Seconds();
-                        o.Finally = () => log.Debug($"Dir: Moved {dir.FullName()} to {webJobTargetDir.FullName()}");
-                    }).UntilNoExceptions();
-                
-                dir.DeleteIfExists();
-            });
+            outputDir.EnumerateFiles().MoveTo(webJobTargetDir, true, true, log);//must iterated before we scan for dirs
+            outputDir.EnumerateDirectories().CopyTo(webJobTargetDir, true, log);
         }
     }
 }
