@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
@@ -12,17 +11,15 @@ namespace Lib.Build
     public class SolutionPreBuild
     {
         private readonly BuildArgs _args;
-        private readonly CallbackRunner _callbackRunner;
         private readonly ILogDispatcher _slnLog;
 
-        public SolutionPreBuild(BuildArgs args, ILogDispatcher slnLog, CallbackRunner callbackRunner)
+        public SolutionPreBuild(BuildArgs args, ILogDispatcher slnLog)
         {
             _args = args;
-            _callbackRunner = callbackRunner;
             _slnLog = slnLog.InContext(nameof(SolutionPreBuild));
         }
 
-        public async Task RunAsync()
+        public void Run()
         {
             _slnLog.Information($"Starting {nameof(SolutionPreBuild)}");
 
@@ -31,11 +28,9 @@ namespace Lib.Build
 
             //add csproj bin dirs 
             var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
-            csprojBinDirs.ForEachParallel(CleanDir);
-
-            await _callbackRunner
-                .InvokeCallbacksAsync(_args.PreBuildCallbacks, _args.SolutionDir, _args.ReleaseArtifactsDir, _slnLog)
-                .ConfigureAwait(false);
+            
+            //TODO:Re-enable
+            //csprojBinDirs.ForEachParallel(CleanDir);
         }
 
         private void CleanDir(DirPath dir)
