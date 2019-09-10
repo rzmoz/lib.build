@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
-using Microsoft.VisualBasic;
 using Newtonsoft.Json.Linq;
 
 namespace Lib.Build
@@ -15,10 +14,13 @@ namespace Lib.Build
     public class SolutionPostBuild
     {
         private readonly BuildArgs _args;
-        private readonly CallbackRunner _callbackRunner;
 
         private const string _dotNetFrameworkPattern = @"^net[0-9]+$";
+        private const string _dotNetStandardPattern = @"^netstandard[0-9\.]+$";
+        private const string _dotNetCoreAppPattern = @"^netcoreapp[0-9\.]+$";
         private static readonly Regex _dotNetFrameworkRegex = new Regex(_dotNetFrameworkPattern, RegexOptions.IgnoreCase);
+        private static readonly Regex _dotNetStandardRegex = new Regex(_dotNetStandardPattern, RegexOptions.IgnoreCase);
+        private static readonly Regex _dotNetCoreAppRegex = new Regex(_dotNetCoreAppPattern, RegexOptions.IgnoreCase);
         private readonly ILogDispatcher _slnLog;
 
         private static readonly IReadOnlyList<string> _languageDirs = new[]
@@ -38,20 +40,22 @@ namespace Lib.Build
             "zh-Hant"
         };
 
-        public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog, CallbackRunner callbackRunner)
+        public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog)
         {
             _args = args;
-            _callbackRunner = callbackRunner;
             _slnLog = slnLog.InContext(nameof(SolutionPostBuild));
         }
 
-        public async Task RunAsync()
+        public void Run()
         {
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _args.ReleaseProjects.ForEachParallel(CopyArtifacts);
-            _args.ReleaseProjects.ForEachParallel(CleanRuntimeArtifacts);
-
-            await _callbackRunner.InvokeCallbacksAsync(_args.PostBuildCallbacks, _args.SolutionDir, _args.ReleaseArtifactsDir, _slnLog).ConfigureAwait(false);
+            _slnLog.Information($"Asserting Target Frameworks");
+            _args.ReleaseProjects.ForEachParallel(AssertDotNetFrameworkOutput);
+            _args.ReleaseProjects.ForEachParallel(CleanLanguageBuildArtifacts);
+            _slnLog.Information($"Asserting Web Jobs");
+            _args.ReleaseProjects.ForEachParallel(AssertWebJob);
+            _slnLog.Information($"Copying Release Artifacts");
+            _args.ReleaseProjects.ForEachParallel(CopyReleaseArtifacts);
         }
 
         private DirPath GetTargetDir(FilePath projectFile)
@@ -76,39 +80,43 @@ namespace Lib.Build
             if (_args.Publish && sourceDir.Add(nameof(_args.Publish)).Exists())
                 sourceDir = sourceDir.Add(nameof(_args.Publish));
 
-            _slnLog.Verbose($"{projectFile.NameWoExtension.Highlight()} source dir resolve to: {sourceDir.FullName()}");
-
             return sourceDir;
         }
 
-        private void CleanRuntimeArtifacts(FilePath projectFile)
+        private void CleanLanguageBuildArtifacts(FilePath projectFile)
         {
-            var targetDir = GetTargetDir(projectFile);
-            _languageDirs.ForEachParallel(dir => targetDir.ToDir(dir).DeleteIfExists());
+            var outputDir = GetArtifactsSourceDir(projectFile);
+            _languageDirs.ForEachParallel(dir => outputDir.ToDir(dir).DeleteIfExists());
         }
 
-        private void CopyArtifacts(FilePath projectFile)
+        private void AssertDotNetFrameworkOutput(FilePath projectFile)
+        {
+            var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
+            var targetFramework = $"Not detected: {artifactsSourceDir.Name}";
+
+            if (_dotNetFrameworkRegex.IsMatch(artifactsSourceDir.Name))
+            {
+                targetFramework = ".NET Framework";
+                var binDir = artifactsSourceDir.Add("bin");
+
+                artifactsSourceDir.EnumerateFiles("*.dll").MoveTo(binDir, true, true);
+                artifactsSourceDir.EnumerateFiles("*.pdb").MoveTo(binDir, true, true);
+            }
+            else if (_dotNetStandardRegex.IsMatch(artifactsSourceDir.Name))
+                targetFramework = ".NET Framework";
+            else if (_dotNetCoreAppRegex.IsMatch(artifactsSourceDir.Name))
+                targetFramework = ".NET Core App";
+
+            _slnLog.Debug($"Target Framework for {projectFile.NameWoExtension.Highlight()} is {targetFramework}");
+        }
+
+        private void CopyReleaseArtifacts(FilePath projectFile)
         {
             var releaseTargetDir = GetTargetDir(projectFile);
 
             _slnLog.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()} to {releaseTargetDir.FullName()}");
 
             var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
-
-            var projectLog = _slnLog.InContext(projectFile.NameWoExtension);
-
-            if (_dotNetFrameworkRegex.IsMatch(artifactsSourceDir.Name))
-            {
-                _slnLog.Debug($"{projectFile.NameWoExtension.Highlight()} is .NET Framework");
-                var binDir = artifactsSourceDir.Add("bin");
-
-                artifactsSourceDir.EnumerateFiles("*.dll").MoveTo(binDir, true, true);
-                artifactsSourceDir.EnumerateFiles("*.pdb").MoveTo(binDir, true, true);
-            }
-            else
-                _slnLog.Debug($"{projectFile.NameWoExtension.Highlight()} is .NET Core");
-
-            AssertWebJob(projectFile.NameWoExtension, artifactsSourceDir, projectLog);
 
             try
             {
@@ -120,8 +128,12 @@ namespace Lib.Build
             }
         }
 
-        private void AssertWebJob(string projectName, DirPath outputDir, ILogDispatcher log)
+        private void AssertWebJob(FilePath projectFile)
         {
+            var outputDir = GetArtifactsSourceDir(projectFile);
+            var projectName = projectFile.NameWoExtension;
+
+            var log = _slnLog.InContext(projectName);
             var appSettingsFile = outputDir.ToFile("appSettings.json");
 
             if (appSettingsFile.Exists() == false)
@@ -142,9 +154,12 @@ namespace Lib.Build
             }
             log.Information($"WebJob found: {webJob}");
 
+            using var tempDir = new TempDir();
+            //move content to temp dir since we're copying to sub path of origin
+            outputDir.CopyTo(tempDir.Root, true, _slnLog);
+            outputDir.CleanIfExists();
             var webJobTargetDir = outputDir.Add("app_data", "jobs", webJob, projectName);
-            Robocopy.MoveContent(outputDir.FullName(), webJobTargetDir.FullName(), null, true, null, msg => _slnLog.Debug(msg), msg => _slnLog.Error(msg));
-
+            tempDir.Root.CopyTo(webJobTargetDir, true, _slnLog);
         }
     }
 }

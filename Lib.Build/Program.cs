@@ -20,10 +20,19 @@ namespace Lib.Build
             return await host.RunAsync("Build", async (config, log) =>
             {
                 var callbackRunner = new CallbackRunner();
-                await new SolutionPreBuild(buildArgs, log, callbackRunner).RunAsync().ConfigureAwait(false);
-                new SolutionBuild(buildArgs, log).Run();
-                await new SolutionPostBuild(buildArgs, log, callbackRunner).RunAsync().ConfigureAwait(false);
 
+                if (args.IsSet("nocallbacks", false) == false)
+                    await callbackRunner.InvokeCallbacksAsync(buildArgs.PreBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
+
+                new SolutionPreBuild(buildArgs, log).Run();
+
+                if (args.IsSet("nobuild", false) == false)
+                    new SolutionBuild(buildArgs, log).Run();
+
+                new SolutionPostBuild(buildArgs, log).Run();
+
+                if (args.IsSet("nocallbacks", false) == false)
+                    await callbackRunner.InvokeCallbacksAsync(buildArgs.PostBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
 
             }).ConfigureAwait(false);
         }
