@@ -15,7 +15,7 @@ namespace Lib.Build
         public async Task InvokeCallbacksAsync(IReadOnlyCollection<FilePath> callbacks, DirPath slnDir, DirPath releaseArtifactsDir, ILogDispatcher log)
         {
             if (log == null)
-                log = new VoidLogger();
+                log = LogDispatcher.NullLogger;
 
             foreach (var callback in callbacks)
             {
@@ -28,7 +28,7 @@ namespace Lib.Build
                         var errors = new StringBuilder();
                         var exitCode = PowerShellCli.RunFileInConsole(
                             $"{callback.FullName()} -slnDir {slnDir.FullName()} -artifactsDir {releaseArtifactsDir.FullName()}",
-                            log.Debug,
+                            output => log.Debug(output),
                             error =>
                             {
                                 log.Warning(error);

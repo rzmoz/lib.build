@@ -23,7 +23,7 @@ namespace Lib.Build
 
         public BuildArgsBuilder(ILogDispatcher log)
         {
-            _log = log ?? new VoidLogger();
+            _log = log ?? LogDispatcher.NullLogger;
         }
 
         public static IReadOnlyDictionary<string, string> KeyMappings { get; } = new Dictionary<string, string>

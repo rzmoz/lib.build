@@ -20,7 +20,7 @@ namespace Lib.Build
             return await host.RunAsync("Build", async (config, log) =>
             {
                 var callbackRunner = new CallbackRunner();
-                
+
                 new SolutionPreBuild(buildArgs, log).Run();
 
                 if (args.IsSet("nocallbacks", false) == false)
@@ -33,7 +33,7 @@ namespace Lib.Build
 
                 if (args.IsSet("nocallbacks", false) == false)
                     await callbackRunner.InvokeCallbacksAsync(buildArgs.PostBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
-
+                return 0;
             }).ConfigureAwait(false);
         }
     }
