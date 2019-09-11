@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
@@ -14,12 +13,6 @@ namespace Lib.Build
     {
         private readonly BuildArgs _args;
 
-        private const string _dotNetFrameworkPattern = @"^net[0-9]+$";
-        private const string _dotNetStandardPattern = @"^netstandard[0-9\.]+$";
-        private const string _dotNetCoreAppPattern = @"^netcoreapp[0-9\.]+$";
-        private static readonly Regex _dotNetFrameworkRegex = new Regex(_dotNetFrameworkPattern, RegexOptions.IgnoreCase);
-        private static readonly Regex _dotNetStandardRegex = new Regex(_dotNetStandardPattern, RegexOptions.IgnoreCase);
-        private static readonly Regex _dotNetCoreAppRegex = new Regex(_dotNetCoreAppPattern, RegexOptions.IgnoreCase);
         private readonly ILogDispatcher _slnLog;
 
         private static readonly IReadOnlyList<string> _languageDirs = new[]
@@ -109,33 +102,32 @@ namespace Lib.Build
             var outputDir = GetArtifactsSourceDir(projectFile);
             var projectName = projectFile.NameWoExtension;
 
-            var log = _slnLog.InContext(projectName);
+
             var appSettingsFile = outputDir.ToFile("appSettings.json");
 
             if (appSettingsFile.Exists() == false)
             {
-                log.Verbose($"Not WebJob. {appSettingsFile.FullName()} not found");
+                _slnLog.Debug($"{projectName.Highlight()} not WebJob.");
                 return;
             }
             var appSettingsRawContent = appSettingsFile.ReadAllText(IfNotExists.Mute).ToLowerInvariant();//lowercase to ignore case when accessing properties
-            log.Debug($"{appSettingsFile.Name} found:\r\n{appSettingsRawContent}");
 
             var appSettingsJson = JToken.Parse(appSettingsRawContent);
-            var webJob = appSettingsJson["webjob"]?.Value<string>();
+            var webJobType = appSettingsJson["webjob"]?.Value<string>();
 
-            if (string.IsNullOrWhiteSpace(webJob))
+            if (string.IsNullOrWhiteSpace(webJobType))
             {
-                log.Verbose($"Not WebJob. Property 'webjob' not found in {appSettingsFile.FullName()}");
+                _slnLog.Verbose($"{projectName.Highlight()} not WebJob. Has appsettings file but Property 'webjob' not found\r\n{appSettingsRawContent}");
                 return;
             }
-            log.Information($"WebJob found: {webJob}");
+            _slnLog.Verbose($"{projectName.Highlight()} is {webJobType} WebJob.");
 
             using var tempDir = new TempDir();
             //move content to temp dir since we're copying to sub path of origin
-            outputDir.CopyTo(tempDir.Root, true, _slnLog);
+            outputDir.CopyTo(tempDir.Root, true);
             outputDir.CleanIfExists();
-            var webJobTargetDir = outputDir.Add("app_data", "jobs", webJob, projectName);
-            tempDir.Root.CopyTo(webJobTargetDir, true, _slnLog);
+            var webJobTargetDir = outputDir.Add("app_data", "jobs", webJobType, projectName);
+            tempDir.Root.CopyTo(webJobTargetDir, true);
         }
     }
 }

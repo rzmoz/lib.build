@@ -107,7 +107,7 @@ namespace Lib.Build
         private SemVersion ResolveVersion(string version, DirPath slnDir)
         {
             var gitPath = slnDir.ToDir(".git").FullName();
-            var shortHash = PowerShellCli.Run(_log, $"git --git-dir=\"{gitPath}\" log --pretty=format:'%h' -n 1").First().ToString();
+            var shortHash = PowerShellCli.RunScript($"git --git-dir=\"{gitPath}\" log --pretty=format:'%h' -n 1", _log).First().ToString();
 
             if (string.IsNullOrEmpty(version) == false)
             {
@@ -120,7 +120,7 @@ namespace Lib.Build
 
             _log.Verbose($"Version not set. Resolving version from git tags in {gitPath}");
 
-            var gitVersions = PowerShellCli.Run(_log, $"git --git-dir=\"{gitPath}\" tag -l *");
+            var gitVersions = PowerShellCli.RunScript($"git --git-dir=\"{gitPath}\" tag -l *", _log);
 
             _log.Verbose($"Git tags found:");
             gitVersions.ForEach(tag => _log.Verbose(tag.ToString()));

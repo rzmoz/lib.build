@@ -43,8 +43,8 @@ namespace Lib.Build
 
                     _slnLog.Information(action.Highlight());
 
-                    var result = ExternalProcess.Run("dotnet", action, _slnLog.Debug, _slnLog.Error);
-                    if (result.ExitCode != 0)
+                    var exitCode = ExternalProcess.Run("dotnet", action, _slnLog.Debug, _slnLog.Error);
+                    if (exitCode != 0)
                         throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details");
                 }
             }
@@ -53,7 +53,7 @@ namespace Lib.Build
                 _args.ReleaseProjects.ForEachParallel(RevertVersion);
             }
         }
-        
+
         private void PatchVersion(FilePath projectFile, SemVersion version)
         {
             var tmpFile = GetTempFilePath(projectFile);
