@@ -4,7 +4,6 @@ using System.Linq;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
-using DotNet.Basics.PowerShell;
 using DotNet.Basics.SevenZip;
 using DotNet.Basics.Sys;
 using Newtonsoft.Json.Linq;
@@ -16,24 +15,9 @@ namespace Lib.Build
         private readonly BuildArgs _args;
 
         private readonly ILogDispatcher _slnLog;
-        private static readonly IReadOnlyList<string> _winRuntimes = new[] { "win", "win-x64", "win10-x64" };
 
-        private static readonly IReadOnlyList<string> _languageDirs = new[]
-        {
-            "cs",
-            "de",
-            "es",
-            "fr",
-            "it",
-            "ja",
-            "ko",
-            "pl",
-            "pt-BR",
-            "ru",
-            "tr",
-            "zh-Hans",
-            "zh-Hant"
-        };
+        private static readonly IReadOnlyList<string> _winRunTimes = new[] { "win", "win-x64", "win10-x64" };
+        private static readonly IReadOnlyList<string> _languageDirs = new[] { "cs", "de", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant" };
 
         public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog)
         {
@@ -44,16 +28,14 @@ namespace Lib.Build
         public void Run()
         {
             _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _args.ReleaseProjects.ForEachParallel(CleanLanguageBuildArtifacts);
+            _args.ReleaseProjects.ForEachParallel(CleanExcessiveCompileArtifacts);
             _slnLog.Information($"Asserting Web Jobs");
             _args.ReleaseProjects.ForEachParallel(AssertWebJob);
             _slnLog.Information($"Copying Release Artifacts");
             _args.ReleaseProjects.ForEachParallel(CopyReleaseArtifacts);
 
             if (_args.Package)
-            {
                 PackageReleaseArtifacts(_args.ReleaseArtifactsDir);
-            }
         }
 
         private DirPath GetTargetDir(FilePath projectFile)
@@ -81,10 +63,13 @@ namespace Lib.Build
             return sourceDir;
         }
 
-        private void CleanLanguageBuildArtifacts(FilePath projectFile)
+        private void CleanExcessiveCompileArtifacts(FilePath projectFile)
         {
             var outputDir = GetArtifactsSourceDir(projectFile);
             _languageDirs.ForEachParallel(dir => outputDir.ToDir(dir).DeleteIfExists());
+            if (_args.Publish)
+                return;
+            outputDir.Add(nameof(_args.Publish)).DeleteIfExists();
         }
 
         private void PackageReleaseArtifacts(DirPath artifactsDir)
@@ -93,24 +78,24 @@ namespace Lib.Build
 
             artifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
             {
-                var runtimesDir = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
-
-                runtimesDir?.EnumerateDirectories().ForEachParallel(runtimeDir =>
-            {
-                if (_winRuntimes.Contains(runtimeDir.Name, StringComparer.InvariantCultureIgnoreCase))
+                var runTimes = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
+                if (runTimes == null)
                     return;
-                runtimeDir.DeleteIfExists();
-            });
-                if (runtimesDir != null) //means that we have an exe tool which are the only modules that makes sense to archive
+
+                runTimes.EnumerateDirectories().ForEachParallel(runtimeDir =>
                 {
-                    var baseName = artifactsDir.ToFile($"{moduleDir.Name}").FullName();
-                    if (_args.Version > SemVersion.Parse("0.0.0"))
-                        baseName += $"_{_args.Version.SemVer10String}";
-                    sevenZip.Create7zFromDirectory(moduleDir.FullName(), baseName);
-                    sevenZip.Create7zFromDirectory(runtimesDir.FullName(), $"{baseName}_runtimes");
-                    runtimesDir.DeleteIfExists();
-                    sevenZip.Create7zFromDirectory(moduleDir.FullName(), $"{baseName}_tool");
-                }
+                    if (_winRunTimes.Contains(runtimeDir.Name, StringComparer.InvariantCultureIgnoreCase))
+                        return;
+                    runtimeDir.DeleteIfExists();
+                });
+
+                var baseName = artifactsDir.ToFile($"{moduleDir.Name}").FullName();
+                if (_args.Version > SemVersion.Parse("0.0.0"))
+                    baseName += $"_{_args.Version.SemVer10String}";
+                sevenZip.Create7zFromDirectory(moduleDir.FullName(), baseName);
+                sevenZip.Create7zFromDirectory(runTimes.FullName(), $"{baseName}_runtimes");
+                runTimes.DeleteIfExists();
+                sevenZip.Create7zFromDirectory(moduleDir.FullName(), $"{baseName}_tool");
             });
         }
 
