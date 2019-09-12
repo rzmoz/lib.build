@@ -97,7 +97,7 @@ namespace Lib.Build
             var args = new BuildArgs
             {
                 Configuration = ResolveConfiguration(_config),
-                SolutionDir = ResolveSolutionDir(_config),
+                SolutionDir = SolutionDir,
                 Publish = _config.Args.ToArray().IsSet(nameof(BuildArgs.Publish)),
                 Package = _config.Args.ToArray().IsSet(nameof(BuildArgs.Package))
 
