@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
@@ -35,7 +36,7 @@ namespace Lib.Build
             _args.ReleaseProjects.ForEachParallel(CopyReleaseArtifacts);
 
             if (_args.Package)
-                PackageReleaseArtifacts(_args.ReleaseArtifactsDir);
+                PackageReleaseArtifacts();
         }
 
         private DirPath GetTargetDir(FilePath projectFile)
@@ -72,11 +73,22 @@ namespace Lib.Build
             outputDir.Add(nameof(_args.Publish)).DeleteIfExists();
         }
 
-        private void PackageReleaseArtifacts(DirPath artifactsDir)
+        private void PackageReleaseArtifacts()
         {
+            //scan for nuget packages
+            _args.ReleaseProjects.Select(proj => proj.Directory.Add("bin").EnumerateDirectories()).SelectMany(dir => dir).ForEachParallel(dir =>
+              {
+                  _slnLog.Verbose($"Looking for nuget packages in {dir}");
+                  dir.EnumerateFiles("*.nupkg", SearchOption.AllDirectories).ForEachParallel(nuget =>
+                  {
+                      _slnLog.Debug($"Nuget found: {nuget.FullName()}");
+                      nuget.CopyTo(_args.ReleaseArtifactsDir);
+                  });
+              });
+
             var sevenZip = new SevenZipExe(_slnLog.Debug, _slnLog.Error);
 
-            artifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
+            _args.ReleaseArtifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
             {
                 var runTimes = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
                 if (runTimes == null)
@@ -89,7 +101,7 @@ namespace Lib.Build
                     runtimeDir.DeleteIfExists();
                 });
 
-                var baseName = artifactsDir.ToFile($"{moduleDir.Name}").FullName();
+                var baseName = _args.ReleaseArtifactsDir.ToFile($"{moduleDir.Name}").FullName();
                 if (_args.Version > SemVersion.Parse("0.0.0"))
                     baseName += $"_{_args.Version.SemVer10String}";
                 sevenZip.Create7zFromDirectory(moduleDir.FullName(), baseName);
@@ -115,15 +127,6 @@ namespace Lib.Build
             {
                 throw new BuildException($"Copy artifacts for {projectFile.Name} failed with");
             }
-
-            //copy nugets to releaseArtifacts dir
-            var nugetSourceDir = artifactsSourceDir.Parent;
-            _slnLog.Verbose($"Looking for nuget packages in {nugetSourceDir}");
-            nugetSourceDir.EnumerateFiles("*.nupkg").ForEachParallel(nuget =>
-            {
-                _slnLog.Debug($"Nuget found: {nugetSourceDir}");
-                nuget.CopyTo(releaseTargetDir.Parent);
-            });
         }
 
         private void AssertWebJob(FilePath projectFile)
