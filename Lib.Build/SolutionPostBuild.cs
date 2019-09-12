@@ -115,6 +115,15 @@ namespace Lib.Build
             {
                 throw new BuildException($"Copy artifacts for {projectFile.Name} failed with");
             }
+
+            //copy nugets to releaseArtifacts dir
+            var nugetSourceDir = artifactsSourceDir.Parent;
+            _slnLog.Verbose($"Looking for nuget packages in {nugetSourceDir}");
+            nugetSourceDir.EnumerateFiles("*.nupkg").ForEachParallel(nuget =>
+            {
+                _slnLog.Debug($"Nuget found: {nugetSourceDir}");
+                nuget.CopyTo(releaseTargetDir.Parent);
+            });
         }
 
         private void AssertWebJob(FilePath projectFile)
