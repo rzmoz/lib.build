@@ -18,12 +18,18 @@ namespace Lib.Build
         private static readonly string _testProjectFilterKey = "TestProjectFilter";
         private static readonly string _preBuildCallbackFilterKey = "PreBuildCallbackFilter";
         private static readonly string _postBuildCallbackFilterKey = "PostBuildCallbackFilter";
+        private readonly ArgsFilesProvider _argsFilesProvider = new ArgsFilesProvider();
 
+        private readonly ICliConfiguration _config;
         private readonly ILogDispatcher _log;
 
-        public BuildArgsBuilder(ILogDispatcher log)
+        private bool _loadArgsFromDisk;
+
+        public BuildArgsBuilder(ICliConfiguration config, ILogDispatcher log)
         {
+            _config = config;
             _log = log ?? LogDispatcher.NullLogger;
+            SolutionDir = ResolveSolutionDir(_config);
         }
 
         public static IReadOnlyDictionary<string, string> KeyMappings { get; } = new Dictionary<string, string>
@@ -44,25 +50,27 @@ namespace Lib.Build
             {"postBuildFilter", _postBuildCallbackFilterKey},
         };
 
-        public BuildArgs Build(ICliConfiguration config)
+        public DirPath SolutionDir { get; }
+
+        public BuildArgsBuilder WithArgsFromDisk()
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            var args = new BuildArgs
+            _loadArgsFromDisk = true;
+            return this;
+        }
+
+        public BuildArgs Build()
+        {
+            BuildArgs args = null;
+            if (_loadArgsFromDisk)
             {
-                Configuration = ResolveConfiguration(config),
-                SolutionDir = ResolveSolutionDir(config),
-                Publish = config.Args.ToArray().IsSet(nameof(BuildArgs.Publish)),
-                Package = config.Args.ToArray().IsSet(nameof(BuildArgs.Package))
-
-            };
-            args.ReleaseArtifactsDir = ResolveReleaseArtifactsDir(config, args.SolutionDir);
-            args.TestArtifactsDir = ResolveTestArtifactsDir(config, args.SolutionDir);
-            args.Version = ResolveVersion(config[nameof(BuildArgs.Version)], args.SolutionDir);
-            args.TestProjects = ResolveFiles(args.SolutionDir, config[_testProjectFilterKey] ?? "*.tests.csproj", "Test Projects");
-            args.ReleaseProjects = ResolveReleaseProjects(args.SolutionDir, config[_releaseProjectFilterKey] ?? "*.csproj", args.TestProjects);
-
-            args.PreBuildCallbacks = ResolveFiles(args.SolutionDir, config[_preBuildCallbackFilterKey] ?? "*.PreBuild.Callback.ps1", nameof(args.PreBuildCallbacks));
-            args.PostBuildCallbacks = ResolveFiles(args.SolutionDir, config[_postBuildCallbackFilterKey] ?? "*.PostBuild.Callback.ps1", nameof(args.PostBuildCallbacks));
+                args = _argsFilesProvider.Load(SolutionDir.Name);
+                if (args != null)
+                    _log.Debug($"Args loaded from {_argsFilesProvider.SettingsPath(SolutionDir.Name)}");
+                else
+                    throw new BuildException($"ArgsFromDisk flag is set but args was NOT loaded from {_argsFilesProvider.SettingsPath(SolutionDir.Name)}");
+            }
+            else
+                args = ResolveArgs();
 
             _log.Information($"{nameof(BuildArgs)} initialized with:");
             _log.Debug($"{nameof(BuildArgs.Configuration)}: {args.Configuration.Highlight()}");
@@ -77,6 +85,32 @@ namespace Lib.Build
 
             _log.Debug($"{nameof(BuildArgs.PreBuildCallbacks)}: {JsonSerializer.Serialize(args.PreBuildCallbacks.Select(callback => callback.FullName()), new JsonSerializerOptions { WriteIndented = true })}");
             _log.Debug($"{nameof(BuildArgs.PostBuildCallbacks)}: {JsonSerializer.Serialize(args.PostBuildCallbacks.Select(callback => callback.FullName()), new JsonSerializerOptions { WriteIndented = true })}");
+
+            _argsFilesProvider.Save(SolutionDir.Name, args);
+            return args;
+        }
+
+        private BuildArgs ResolveArgs()
+        {
+            _log.Debug($"Resolving args from context");
+
+            var args = new BuildArgs
+            {
+                Configuration = ResolveConfiguration(_config),
+                SolutionDir = ResolveSolutionDir(_config),
+                Publish = _config.Args.ToArray().IsSet(nameof(BuildArgs.Publish)),
+                Package = _config.Args.ToArray().IsSet(nameof(BuildArgs.Package))
+
+            };
+            args.ReleaseArtifactsDir = ResolveReleaseArtifactsDir(_config, args.SolutionDir);
+            args.TestArtifactsDir = ResolveTestArtifactsDir(_config, args.SolutionDir);
+            args.Version = ResolveVersion(_config[nameof(BuildArgs.Version)], args.SolutionDir);
+            args.TestProjects = ResolveFiles(args.SolutionDir, _config[_testProjectFilterKey] ?? "*.tests.csproj", "Test Projects");
+            args.ReleaseProjects = ResolveReleaseProjects(args.SolutionDir, _config[_releaseProjectFilterKey] ?? "*.csproj", args.TestProjects);
+
+            args.PreBuildCallbacks = ResolveFiles(args.SolutionDir, _config[_preBuildCallbackFilterKey] ?? "*.PreBuild.Callback.ps1", nameof(args.PreBuildCallbacks));
+            args.PostBuildCallbacks = ResolveFiles(args.SolutionDir, _config[_postBuildCallbackFilterKey] ?? "*.PostBuild.Callback.ps1", nameof(args.PostBuildCallbacks));
+
             return args;
         }
 

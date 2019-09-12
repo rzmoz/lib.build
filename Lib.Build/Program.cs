@@ -12,10 +12,14 @@ namespace Lib.Build
 #endif
             //init host
             var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildArgsBuilder.KeyMappings)).Build();
+            var argsBuilder = new BuildArgsBuilder(host, host.Log);
+
+            if (args.IsSet("argsFromDisk"))
+                argsBuilder = argsBuilder.WithArgsFromDisk();
 
             //init build args
-            var buildArgs = new BuildArgsBuilder(host.Log).Build(host);
-
+            var buildArgs = argsBuilder.Build();
+            
             //run build
             return await host.RunAsync("Build", async (config, log) =>
             {
@@ -23,16 +27,13 @@ namespace Lib.Build
 
                 new SolutionPreBuild(buildArgs, log).Run();
 
-                if (args.IsSet("nocallbacks", false) == false)
-                    await callbackRunner.InvokeCallbacksAsync(buildArgs.PreBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
+                await callbackRunner.InvokeCallbacksAsync(buildArgs.PreBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
 
-                if (args.IsSet("nobuild", false) == false)
-                    new SolutionBuild(buildArgs, log).Run();
+                new SolutionBuild(buildArgs, log).Run();
 
                 new SolutionPostBuild(buildArgs, log).Run();
 
-                if (args.IsSet("nocallbacks", false) == false)
-                    await callbackRunner.InvokeCallbacksAsync(buildArgs.PostBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
+                await callbackRunner.InvokeCallbacksAsync(buildArgs.PostBuildCallbacks, buildArgs.SolutionDir, buildArgs.ReleaseArtifactsDir, log).ConfigureAwait(false);
                 return 0;
             }).ConfigureAwait(false);
         }
