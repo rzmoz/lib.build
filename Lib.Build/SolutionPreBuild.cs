@@ -27,7 +27,7 @@ namespace Lib.Build
             _args.ReleaseArtifactsDir.CreateIfNotExists();
 
             //add csproj bin dirs 
-            var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
+            var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("bin", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
             csprojBinDirs.ForEachParallel(CleanDir);
         }
 
