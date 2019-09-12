@@ -19,11 +19,11 @@ namespace Lib.Build
 
         protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
         {
-            log.Information($"Starting {nameof(SolutionPostBuild)}");
+            log.Info($"Starting {nameof(SolutionPostBuild)}");
             args.ReleaseProjects.ForEachParallel(proj => CleanExcessiveCompileArtifacts(proj, args, log));
-            log.Information($"Asserting Web Jobs");
+            log.Info($"Asserting Web Jobs");
             args.ReleaseProjects.ForEachParallel(proj => AssertWebJob(proj, args, log));
-            log.Information($"Copying Release Artifacts");
+            log.Info($"Copying Release Artifacts");
             args.ReleaseProjects.ForEachParallel(proj => CopyReleaseArtifacts(proj, args, log));
 
             if (args.Package)

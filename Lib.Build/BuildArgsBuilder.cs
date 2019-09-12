@@ -72,7 +72,7 @@ namespace Lib.Build
             else
                 args = ResolveArgs();
 
-            _log.Information($"{nameof(BuildArgs)} initialized with:");
+            _log.Info($"{nameof(BuildArgs)} initialized with:");
             _log.Debug($"{nameof(BuildArgs.Configuration)}: {args.Configuration.Highlight()}");
             _log.Debug($"{nameof(BuildArgs.SolutionDir)}: {args.SolutionDir.FullName().Highlight()}");
             _log.Debug($"{nameof(BuildArgs.ReleaseArtifactsDir)}: {args.ReleaseArtifactsDir.FullName().Highlight()}");
@@ -188,7 +188,7 @@ namespace Lib.Build
             if (slnDir == null || slnDir.Name.StartsWith("-"))
             {
                 slnDir = ".".ToDir().FullName().ToDir();
-                _log.Information($"{nameof(BuildArgs.SolutionDir)} not set. Will try to resolve automatically.");
+                _log.Info($"{nameof(BuildArgs.SolutionDir)} not set. Will try to resolve automatically.");
             }
 
             if (slnDir.Exists() == false)
@@ -198,7 +198,7 @@ namespace Lib.Build
                 _log.Debug($"Looking for sln files in {slnDir.FullName().Highlight()}");
                 if (slnDir.EnumerateFiles("*.sln").Any())
                 {
-                    _log.Information($"SolutionDir resolved to: {slnDir.FullName().Highlight()}");
+                    _log.Info($"SolutionDir resolved to: {slnDir.FullName().Highlight()}");
                     return slnDir;
                 }
 

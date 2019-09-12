@@ -21,8 +21,8 @@
     <FileVersion>3.0.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.3.3" />
-    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.2.7" />
+    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.3.5" />
+    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.2.9" />
     <PackageReference Include="DotNet.Basics.PowerShell" Version="7.0.0-beta.2.2" />
     <PackageReference Include="DotNet.Basics.SevenZip" Version="19.0.0-beta.2.2" />
   </ItemGroup>

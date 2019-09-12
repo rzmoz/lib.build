@@ -13,7 +13,7 @@ namespace Lib.Build
     {
         protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
         {
-            log.Information($"Starting {nameof(SolutionPreBuild)}");
+            log.Info($"Starting {nameof(SolutionPreBuild)}");
 
             CleanDir(args.ReleaseArtifactsDir, log);
             args.ReleaseArtifactsDir.CreateIfNotExists();

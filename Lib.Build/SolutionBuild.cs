@@ -17,7 +17,7 @@ namespace Lib.Build
 
         protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
         {
-            log.Information($"Starting {nameof(SolutionBuild)}");
+            log.Info($"Starting {nameof(SolutionBuild)}");
 
             try
             {
@@ -33,7 +33,7 @@ namespace Lib.Build
                     var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {args.Configuration} --no-incremental --verbosity quiet";
                     var action = args.Publish ? publishAction : buildAction;
 
-                    log.Information(action.Highlight());
+                    log.Info(action.Highlight());
 
                     var exitCode = ExternalProcess.Run("dotnet", action, log.Debug, log.Error);
                     if (exitCode != 0)
