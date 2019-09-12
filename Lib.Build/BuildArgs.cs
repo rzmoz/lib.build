@@ -11,7 +11,15 @@ namespace Lib.Build
         public DirPath ReleaseArtifactsDir { get; set; }
         public DirPath TestArtifactsDir { get; set; }
         
+        /// <summary>
+        /// Triggers (dotnet) publish instead of (dotnet) build
+        /// </summary>
         public bool Publish { get; set; }
+        
+        /// <summary>
+        /// Ensures output is packaged
+        /// </summary>
+        public bool Package { get; set; }
 
         public SemVersion Version { get; set; } = new SemVersion(0, 0, 0);
 

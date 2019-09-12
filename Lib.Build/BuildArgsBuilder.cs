@@ -52,6 +52,7 @@ namespace Lib.Build
                 Configuration = ResolveConfiguration(config),
                 SolutionDir = ResolveSolutionDir(config),
                 Publish = config.Args.ToArray().IsSet(nameof(BuildArgs.Publish)),
+                Package = config.Args.ToArray().IsSet(nameof(BuildArgs.Package))
 
             };
             args.ReleaseArtifactsDir = ResolveReleaseArtifactsDir(config, args.SolutionDir);

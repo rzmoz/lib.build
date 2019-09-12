@@ -4,6 +4,8 @@ using System.Linq;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
+using DotNet.Basics.PowerShell;
+using DotNet.Basics.SevenZip;
 using DotNet.Basics.Sys;
 using Newtonsoft.Json.Linq;
 
@@ -14,6 +16,7 @@ namespace Lib.Build
         private readonly BuildArgs _args;
 
         private readonly ILogDispatcher _slnLog;
+        private static readonly IReadOnlyList<string> _winRuntimes = new[] { "win", "win-x64", "win10-x64" };
 
         private static readonly IReadOnlyList<string> _languageDirs = new[]
         {
@@ -46,6 +49,11 @@ namespace Lib.Build
             _args.ReleaseProjects.ForEachParallel(AssertWebJob);
             _slnLog.Information($"Copying Release Artifacts");
             _args.ReleaseProjects.ForEachParallel(CopyReleaseArtifacts);
+
+            if (_args.Package)
+            {
+                PackageReleaseArtifacts(_args.ReleaseArtifactsDir);
+            }
         }
 
         private DirPath GetTargetDir(FilePath projectFile)
@@ -77,6 +85,33 @@ namespace Lib.Build
         {
             var outputDir = GetArtifactsSourceDir(projectFile);
             _languageDirs.ForEachParallel(dir => outputDir.ToDir(dir).DeleteIfExists());
+        }
+
+        private void PackageReleaseArtifacts(DirPath artifactsDir)
+        {
+            var sevenZip = new SevenZipExe(_slnLog.Debug, _slnLog.Error);
+
+            artifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
+            {
+                var runtimesDir = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
+
+                runtimesDir?.EnumerateDirectories().ForEachParallel(runtimeDir =>
+            {
+                if (_winRuntimes.Contains(runtimeDir.Name, StringComparer.InvariantCultureIgnoreCase))
+                    return;
+                runtimeDir.DeleteIfExists();
+            });
+                if (runtimesDir != null) //means that we have an exe tool which are the only modules that makes sense to archive
+                {
+                    var baseName = artifactsDir.ToFile($"{moduleDir.Name}").FullName();
+                    if (_args.Version > SemVersion.Parse("0.0.0"))
+                        baseName += $"_{_args.Version.SemVer10String}";
+                    sevenZip.Create7zFromDirectory(moduleDir.FullName(), baseName);
+                    sevenZip.Create7zFromDirectory(runtimesDir.FullName(), $"{baseName}_runtimes");
+                    runtimesDir.DeleteIfExists();
+                    sevenZip.Create7zFromDirectory(moduleDir.FullName(), $"{baseName}_tool");
+                }
+            });
         }
 
         private void CopyReleaseArtifacts(FilePath projectFile)

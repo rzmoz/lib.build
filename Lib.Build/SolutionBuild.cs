@@ -67,8 +67,8 @@ namespace Lib.Build
                 throw new BuildException($"Failed to update version for {projectFile.FullName()}. Csproj file format seems to be wrong");
 
             EnsureNodeWithValue(propertyGroupElement, "Version", version.SemVer20String);
-            EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.SemVer10String);
-            EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.SemVer10String);
+            EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.FileVerString);
+            EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.FileVerString);
             _slnLog.Debug($"Patching {projectFile.Name.Highlight()} with version {version.SemVer20String.Highlight()}");
             using (var writer = new StreamWriter(projectFile.FullName()))
             using (var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true }))
