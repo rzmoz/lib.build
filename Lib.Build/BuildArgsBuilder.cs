@@ -67,7 +67,7 @@ namespace Lib.Build
                 if (args != null)
                     _log.Debug($"Args loaded from {_argsFilesProvider.SettingsPath(SolutionDir.Name)}");
                 else
-                    throw new BuildException($"ArgsFromDisk flag is set but args was NOT loaded from {_argsFilesProvider.SettingsPath(SolutionDir.Name)}");
+                    throw new BuildException($"ArgsFromDisk flag is set but args was NOT loaded from {_argsFilesProvider.SettingsPath(SolutionDir.Name)}", 500);
             }
             else
                 args = ResolveArgs();
@@ -192,7 +192,7 @@ namespace Lib.Build
             }
 
             if (slnDir.Exists() == false)
-                throw new BuildException($"Directory not found: {slnDir.FullName()}");
+                throw new BuildException($"Directory not found: {slnDir.FullName()}", 400);
             do
             {
                 _log.Debug($"Looking for sln files in {slnDir.FullName().Highlight()}");
@@ -205,7 +205,7 @@ namespace Lib.Build
                 slnDir = slnDir.Parent;
             } while (slnDir != null);
 
-            throw new BuildException($"No solution files found in {".".ToDir().FullName()} or any parent dir");
+            throw new BuildException($"No solution files found in {".".ToDir().FullName()} or any parent dir", 400);
         }
         private string ResolveConfiguration(ICliConfiguration config)
         {

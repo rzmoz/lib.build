@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
@@ -11,44 +12,35 @@ using Newtonsoft.Json.Linq;
 
 namespace Lib.Build
 {
-    public class SolutionPostBuild
+    public class SolutionPostBuild : BuildStep
     {
-        private readonly BuildArgs _args;
-
-        private readonly ILogDispatcher _slnLog;
-
         private static readonly IReadOnlyList<string> _winRunTimes = new[] { "win", "win-x64", "win10-x64" };
         private static readonly IReadOnlyList<string> _languageDirs = new[] { "cs", "de", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant" };
 
-        public SolutionPostBuild(BuildArgs args, ILogDispatcher slnLog)
+        protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
         {
-            _args = args;
-            _slnLog = slnLog.InContext(nameof(SolutionPostBuild));
+            log.Information($"Starting {nameof(SolutionPostBuild)}");
+            args.ReleaseProjects.ForEachParallel(proj => CleanExcessiveCompileArtifacts(proj, args, log));
+            log.Information($"Asserting Web Jobs");
+            args.ReleaseProjects.ForEachParallel(proj => AssertWebJob(proj, args, log));
+            log.Information($"Copying Release Artifacts");
+            args.ReleaseProjects.ForEachParallel(proj => CopyReleaseArtifacts(proj, args, log));
+
+            if (args.Package)
+                PackageReleaseArtifacts(args, log);
+            return Task.FromResult(0);
         }
 
-        public void Run()
+        private DirPath GetTargetDir(FilePath projectFile, DirPath releaseArtifactsDir)
         {
-            _slnLog.Information($"Starting {nameof(SolutionPostBuild)}");
-            _args.ReleaseProjects.ForEachParallel(CleanExcessiveCompileArtifacts);
-            _slnLog.Information($"Asserting Web Jobs");
-            _args.ReleaseProjects.ForEachParallel(AssertWebJob);
-            _slnLog.Information($"Copying Release Artifacts");
-            _args.ReleaseProjects.ForEachParallel(CopyReleaseArtifacts);
-
-            if (_args.Package)
-                PackageReleaseArtifacts();
+            return releaseArtifactsDir.ToDir(projectFile.NameWoExtension);
         }
 
-        private DirPath GetTargetDir(FilePath projectFile)
-        {
-            return _args.ReleaseArtifactsDir.ToDir(projectFile.NameWoExtension);
-        }
-
-        private DirPath GetArtifactsSourceDir(FilePath projectFile)
+        private DirPath GetArtifactsSourceDir(FilePath projectFile, BuildArgs args)
         {
             var sourceDir = projectFile.Directory().ToDir("bin");
-            if (sourceDir.Add(_args.Configuration).Exists())
-                sourceDir = sourceDir.Add(_args.Configuration);
+            if (sourceDir.Add(args.Configuration).Exists())
+                sourceDir = sourceDir.Add(args.Configuration);
             try
             {
                 sourceDir = sourceDir.EnumerateDirectories().SingleOrDefault() ?? sourceDir;//look for target framework dir
@@ -58,37 +50,38 @@ namespace Lib.Build
                 //ignore if there's more than a single file.
             }
 
-            if (_args.Publish && sourceDir.Add(nameof(_args.Publish)).Exists())
-                sourceDir = sourceDir.Add(nameof(_args.Publish));
+            if (args.Publish && sourceDir.Add(nameof(args.Publish)).Exists())
+                sourceDir = sourceDir.Add(nameof(args.Publish));
 
             return sourceDir;
         }
 
-        private void CleanExcessiveCompileArtifacts(FilePath projectFile)
+        private void CleanExcessiveCompileArtifacts(FilePath projectFile, BuildArgs args, ILogDispatcher log)
         {
-            var outputDir = GetArtifactsSourceDir(projectFile);
+            var outputDir = GetArtifactsSourceDir(projectFile, args);
             _languageDirs.ForEachParallel(dir => outputDir.ToDir(dir).DeleteIfExists());
-            if (_args.Publish)
+            if (args.Publish)
                 return;
-            outputDir.Add(nameof(_args.Publish)).DeleteIfExists();
+
+            outputDir.Add(nameof(args.Publish)).DeleteIfExists();
         }
 
-        private void PackageReleaseArtifacts()
+        private void PackageReleaseArtifacts(BuildArgs args, ILogDispatcher log)
         {
             //scan for nuget packages
-            _args.ReleaseProjects.Select(proj => proj.Directory.Add("bin").EnumerateDirectories()).SelectMany(dir => dir).ForEachParallel(dir =>
+            args.ReleaseProjects.Select(proj => proj.Directory.Add("bin").EnumerateDirectories()).SelectMany(dir => dir).ForEachParallel(dir =>
               {
-                  _slnLog.Verbose($"Looking for nuget packages in {dir}");
+                  log.Verbose($"Looking for nuget packages in {dir}");
                   dir.EnumerateFiles("*.nupkg", SearchOption.AllDirectories).ForEachParallel(nuget =>
                   {
-                      _slnLog.Debug($"Nuget found: {nuget.FullName()}");
-                      nuget.CopyTo(_args.ReleaseArtifactsDir);
+                      log.Debug($"Nuget found: {nuget.FullName()}");
+                      nuget.CopyTo(args.ReleaseArtifactsDir);
                   });
               });
 
-            var sevenZip = new SevenZipExe(_slnLog.Debug, _slnLog.Error);
+            var sevenZip = new SevenZipExe(log.Debug, log.Error);
 
-            _args.ReleaseArtifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
+            args.ReleaseArtifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
             {
                 var runTimes = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
                 if (runTimes == null)
@@ -101,9 +94,9 @@ namespace Lib.Build
                     runtimeDir.DeleteIfExists();
                 });
 
-                var baseName = _args.ReleaseArtifactsDir.ToFile($"{moduleDir.Name}").FullName();
-                if (_args.Version > SemVersion.Parse("0.0.0"))
-                    baseName += $"_{_args.Version.SemVer10String}";
+                var baseName = args.ReleaseArtifactsDir.ToFile($"{moduleDir.Name}").FullName();
+                if (args.Version > SemVersion.Parse("0.0.0"))
+                    baseName += $"_{args.Version.SemVer10String}";
                 sevenZip.Create7zFromDirectory(moduleDir.FullName(), baseName);
                 sevenZip.Create7zFromDirectory(runTimes.FullName(), $"{baseName}_runtimes");
                 runTimes.DeleteIfExists();
@@ -111,27 +104,27 @@ namespace Lib.Build
             });
         }
 
-        private void CopyReleaseArtifacts(FilePath projectFile)
+        private void CopyReleaseArtifacts(FilePath projectFile, BuildArgs args, ILogDispatcher log)
         {
-            var releaseTargetDir = GetTargetDir(projectFile);
+            var releaseTargetDir = GetTargetDir(projectFile, args.ReleaseArtifactsDir);
 
-            _slnLog.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()} to {releaseTargetDir.FullName()}");
+            log.Debug($"Copying build artifacts for {releaseTargetDir.Name.Highlight()} to {releaseTargetDir.FullName()}");
 
-            var artifactsSourceDir = GetArtifactsSourceDir(projectFile);
+            var artifactsSourceDir = GetArtifactsSourceDir(projectFile, args);
 
             try
             {
                 artifactsSourceDir.CopyTo(releaseTargetDir, true);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw new BuildException($"Copy artifacts for {projectFile.Name} failed with");
+                throw new BuildException($"Copy artifacts for {projectFile.Name} failed with {e.Message}", 500);
             }
         }
 
-        private void AssertWebJob(FilePath projectFile)
+        private void AssertWebJob(FilePath projectFile, BuildArgs args, ILogDispatcher log)
         {
-            var outputDir = GetArtifactsSourceDir(projectFile);
+            var outputDir = GetArtifactsSourceDir(projectFile, args);
             var projectName = projectFile.NameWoExtension;
 
 
@@ -139,7 +132,7 @@ namespace Lib.Build
 
             if (appSettingsFile.Exists() == false)
             {
-                _slnLog.Debug($"{projectName.Highlight()} not WebJob.");
+                log.Debug($"{projectName.Highlight()} not WebJob.");
                 return;
             }
             var appSettingsRawContent = appSettingsFile.ReadAllText(IfNotExists.Mute).ToLowerInvariant();//lowercase to ignore case when accessing properties
@@ -149,10 +142,10 @@ namespace Lib.Build
 
             if (string.IsNullOrWhiteSpace(webJobType))
             {
-                _slnLog.Verbose($"{projectName.Highlight()} not WebJob. Has appsettings file but Property 'webjob' not found\r\n{appSettingsRawContent}");
+                log.Verbose($"{projectName.Highlight()} not WebJob. Has appsettings file but Property 'webjob' not found\r\n{appSettingsRawContent}");
                 return;
             }
-            _slnLog.Verbose($"{projectName.Highlight()} is {webJobType} WebJob.");
+            log.Verbose($"{projectName.Highlight()} is {webJobType} WebJob.");
 
             using var tempDir = new TempDir();
             //move content to temp dir since we're copying to sub path of origin

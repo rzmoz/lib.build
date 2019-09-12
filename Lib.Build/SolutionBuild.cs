@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -10,66 +11,59 @@ using DotNet.Basics.Sys;
 
 namespace Lib.Build
 {
-    public class SolutionBuild
+    public class SolutionBuild : BuildStep
     {
-        private readonly BuildArgs _args;
-        private readonly ILogDispatcher _slnLog;
-
         private const string _tempFileSuffix = ".temp";
 
-        public SolutionBuild(BuildArgs args, ILogDispatcher slnLog)
+        protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
         {
-            _args = args;
-            _slnLog = slnLog.InContext(nameof(SolutionBuild));
-        }
-
-        public void Run()
-        {
-            _slnLog.Information($"Starting {nameof(SolutionBuild)}");
+            log.Information($"Starting {nameof(SolutionBuild)}");
 
             try
             {
-                _args.ReleaseProjects.ForEachParallel(csproj => PatchVersion(csproj, _args.Version));
+                args.ReleaseProjects.ForEachParallel(csproj => PatchVersion(csproj, args.Version, log));
 
-                _slnLog.Verbose($"Looking for Solution files in {_args.SolutionDir}");
-                var solutionFiles = _args.SolutionDir.EnumerateFiles("*.sln").ToList();
-                _slnLog.Debug($"Solution Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
+                log.Verbose($"Looking for Solution files in {args.SolutionDir}");
+                var solutionFiles = args.SolutionDir.EnumerateFiles("*.sln").ToList();
+                log.Debug($"Solution Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
 
                 foreach (var solutionFile in solutionFiles)
                 {
-                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --force --verbosity quiet";
-                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {_args.Configuration} --no-incremental --verbosity quiet";
-                    var action = _args.Publish ? publishAction : buildAction;
+                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {args.Configuration} --force --verbosity quiet";
+                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {args.Configuration} --no-incremental --verbosity quiet";
+                    var action = args.Publish ? publishAction : buildAction;
 
-                    _slnLog.Information(action.Highlight());
+                    log.Information(action.Highlight());
 
-                    var exitCode = ExternalProcess.Run("dotnet", action, _slnLog.Debug, _slnLog.Error);
+                    var exitCode = ExternalProcess.Run("dotnet", action, log.Debug, log.Error);
                     if (exitCode != 0)
-                        throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details");
+                        throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details", 400);
                 }
+
+                return Task.FromResult(0);
             }
             finally
             {
-                _args.ReleaseProjects.ForEachParallel(RevertVersion);
+                args.ReleaseProjects.ForEachParallel(csproj => RevertVersion(csproj, log));
             }
         }
 
-        private void PatchVersion(FilePath projectFile, SemVersion version)
+        private void PatchVersion(FilePath projectFile, SemVersion version, ILogDispatcher log)
         {
             var tmpFile = GetTempFilePath(projectFile);
-            _slnLog.Verbose($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");
+            log.Verbose($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");
             projectFile.CopyTo(tmpFile, overwrite: true);
 
             var projectXml = projectFile.ReadAllText();
             var projectXDoc = XDocument.Parse(projectXml);
             var propertyGroupElement = projectXDoc.Root.XPathSelectElement("//Project/PropertyGroup");
             if (propertyGroupElement == null)
-                throw new BuildException($"Failed to update version for {projectFile.FullName()}. Csproj file format seems to be wrong");
+                throw new BuildException($"Failed to update version for {projectFile.FullName()}. Csproj file format seems to be wrong", 400);
 
             EnsureNodeWithValue(propertyGroupElement, "Version", version.SemVer20String);
             EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.FileVerString);
             EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.FileVerString);
-            _slnLog.Debug($"Patching {projectFile.Name.Highlight()} with version {version.SemVer20String.Highlight()}");
+            log.Debug($"Patching {projectFile.Name.Highlight()} with version {version.SemVer20String.Highlight()}");
             using (var writer = new StreamWriter(projectFile.FullName()))
             using (var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true }))
             {
@@ -86,16 +80,16 @@ namespace Lib.Build
                 node.Value = value;
         }
 
-        private void RevertVersion(FilePath projectFile)
+        private void RevertVersion(FilePath projectFile, ILogDispatcher log)
         {
             var tmpFile = GetTempFilePath(projectFile);
             if (tmpFile.Exists() == false)
             {
-                _slnLog.Debug($"{tmpFile.FullName()} not found.");
+                log.Debug($"{tmpFile.FullName()} not found.");
             }
             else
             {
-                _slnLog.Debug($"Reverting {tmpFile.FullName()} to {projectFile.FullName()}");
+                log.Debug($"Reverting {tmpFile.FullName()} to {projectFile.FullName()}");
                 tmpFile.MoveTo(projectFile, overwrite: true, ensureTargetDir: false);
             }
         }

@@ -6,20 +6,26 @@ namespace Lib.Build
 {
     public class BuildException : CliException
     {
-        public BuildException() : base(LogOptions.ExcludeStackTrace)
+        public BuildException(int exitCode) : base(LogOptions.ExcludeStackTrace)
         {
+            ExitCode = exitCode;
         }
 
-        protected BuildException(SerializationInfo info, StreamingContext context) : base(info, context, LogOptions.ExcludeStackTrace)
+        protected BuildException(SerializationInfo info, StreamingContext context, int exitCode) : base(info, context, LogOptions.ExcludeStackTrace)
         {
+            ExitCode = exitCode;
         }
 
-        public BuildException(string message) : base(message, LogOptions.ExcludeStackTrace)
+        public BuildException(string message, int exitCode) : base(message, LogOptions.ExcludeStackTrace)
         {
+            ExitCode = exitCode;
         }
 
-        public BuildException(string message, Exception innerException) : base(message, innerException, LogOptions.ExcludeStackTrace)
+        public BuildException(string message, Exception innerException, int exitCode) : base(message, innerException, LogOptions.ExcludeStackTrace)
         {
+            ExitCode = exitCode;
         }
+
+        public int ExitCode { get; set; }
     }
 }
