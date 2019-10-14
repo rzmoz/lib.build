@@ -12,7 +12,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>rzmoz</Company>
     <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rzmoz/lib.build.git</RepositoryUrl>
