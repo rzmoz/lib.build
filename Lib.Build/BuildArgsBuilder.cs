@@ -30,7 +30,8 @@ namespace Lib.Build
             {"sln", nameof(BuildArgs.SolutionDir)},
             {"slnDir", nameof(BuildArgs.SolutionDir)},
             {"release", _releaseProjectFilterKey},
-            {"test", _testProjectFilterKey}
+            {"test", _testProjectFilterKey},
+            {"pack", nameof(BuildArgs.Package)}
         };
 
         public BuildArgsBuilder(ICliConfiguration config, ILogDispatcher log)
@@ -96,7 +97,7 @@ namespace Lib.Build
 
             return args;
         }
-        
+
         private IReadOnlyList<FilePath> ResolveFiles(DirPath slnDir, string filter, string name)
         {
             _log.Debug($"Resolving {name} with filter: {filter}");
