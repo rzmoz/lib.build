@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using DotNet.Basics.Cli;
-using DotNet.Basics.Sys;
 
 namespace Lib.Build
 {
@@ -23,15 +22,7 @@ namespace Lib.Build
             var buildArgs = argsBuilder.Build();
 
             //run build
-            return await host.RunAsync($"Build {buildArgs.SolutionDir.Name}",
-                async (config, log) =>
-                {
-                    return await new BuildStepDispatcher().DispatchAsync(host, buildArgs).ConfigureAwait(false);
-                },
-                new CliHostOptions
-                {
-                    LongRunningOperationsPingInterval = 1.Minutes()
-                }).ConfigureAwait(false);
+            return await host.RunAsync($"Build {buildArgs.SolutionDir.Name}", async (config, log) => await new BuildStepDispatcher().DispatchAsync(host, buildArgs).ConfigureAwait(false)).ConfigureAwait(false);
         }
     }
 }

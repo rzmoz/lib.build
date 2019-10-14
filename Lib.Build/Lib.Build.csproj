@@ -7,23 +7,20 @@
     <Product>Lib.Build</Product>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>build</ToolCommandName>
-    <Description>Builds Visual Studio 2017+ solutions and produces easy to consume release artifacts</Description>
-    <RepositoryUrl>https://github.com/rzmoz/lib.build</RepositoryUrl>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
-    <PackageLicenseFile></PackageLicenseFile>
+    <Description>Builds .NET solutions and produces easy to consume release artifacts</Description>
     <Copyright>@rzmoz</Copyright>
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>3.0.0-rc.5+94275de</Version>
-    <AssemblyVersion>3.0.0</AssemblyVersion>
-    <FileVersion>3.0.0</FileVersion>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Company>rzmoz</Company>
+    <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rzmoz/lib.build.git</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.3.5" />
-    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.2.9" />
-    <PackageReference Include="DotNet.Basics.PowerShell" Version="7.0.0-beta.2.2" />
-    <PackageReference Include="DotNet.Basics.SevenZip" Version="19.0.0-beta.2.2" />
+    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.5.0" />
+    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.3.4" />
+    <PackageReference Include="DotNet.Basics.SevenZip" Version="19.0.0-beta.3.1" />
+    <PackageReference Include="LibGit2Sharp" Version="0.26.1" />
   </ItemGroup>
 </Project>

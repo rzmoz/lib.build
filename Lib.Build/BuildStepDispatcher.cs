@@ -14,10 +14,9 @@ namespace Lib.Build
         {
             //order matters!
             new SolutionPreBuild(),
-            new SolutionPreBuildCallBack(),
             new SolutionBuild(),
-            new SolutionPostBuild(),
-            new SolutionPostBuildCallBack(),
+            new SolutionTest(),
+            new SolutionPostBuild()
         };
 
         internal const string RunOnlyFlag = "runOnly";
@@ -27,7 +26,7 @@ namespace Lib.Build
             var stepsToRun = (host.Args.ToArray().IsSet(RunOnlyFlag)
                 ? host[RunOnlyFlag].Split('|', StringSplitOptions.RemoveEmptyEntries)
                 : _steps.Select(step => step.Flag)).ToList();
-            
+
             host.Log.Info($"Enabled steps: {stepsToRun.JoinString()}");
 
             foreach (var buildStep in _steps)

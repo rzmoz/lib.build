@@ -21,7 +21,8 @@ namespace Lib.Build
 
             try
             {
-                args.ReleaseProjects.ForEachParallel(csproj => PatchVersion(csproj, args.Version, log));
+                if (args.Package)
+                    args.ReleaseProjects.ForEachParallel(csproj => PatchVersion(csproj, args.Version, log));
 
                 log.Verbose($"Looking for Solution files in {args.SolutionDir}");
                 var solutionFiles = args.SolutionDir.EnumerateFiles("*.sln").ToList();
@@ -29,13 +30,9 @@ namespace Lib.Build
 
                 foreach (var solutionFile in solutionFiles)
                 {
-                    var publishAction = $"publish \"{solutionFile.FullName()}\" --configuration {args.Configuration} --force --verbosity quiet";
                     var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {args.Configuration} --no-incremental --verbosity quiet";
-                    var action = args.Publish ? publishAction : buildAction;
-
-                    log.Info(action.Highlight());
-
-                    var exitCode = ExternalProcess.Run("dotnet", action, log.Debug, log.Error);
+                    log.Info(buildAction.Highlight());
+                    var exitCode = ExternalProcess.Run("dotnet", buildAction, log.Debug, log.Error);
                     if (exitCode != 0)
                         throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details", 400);
                 }
@@ -44,7 +41,8 @@ namespace Lib.Build
             }
             finally
             {
-                args.ReleaseProjects.ForEachParallel(csproj => RevertVersion(csproj, log));
+                if (args.Package)
+                    args.ReleaseProjects.ForEachParallel(csproj => RevertVersion(csproj, log));
             }
         }
 

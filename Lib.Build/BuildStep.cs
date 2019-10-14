@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.IO;
 using System.Threading.Tasks;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
-using DotNet.Basics.PowerShell;
 using DotNet.Basics.Sys;
+using DotNet.Basics.Tasks.Repeating;
 
 namespace Lib.Build
 {
@@ -24,41 +22,29 @@ namespace Lib.Build
         }
         protected abstract Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log);
 
-        protected async Task<int> InvokeCallbacksAsync(IReadOnlyCollection<FilePath> callbacks, DirPath slnDir, DirPath releaseArtifactsDir, ILogDispatcher log)
+        protected void InitDir(DirPath dir, ILogDispatcher log)
         {
-            if (log == null)
-                log = LogDispatcher.NullLogger;
-
-            foreach (var callback in callbacks)
+            if (dir.Exists())
             {
-                log.Debug($"Invoking {callback.FullName()}");
-                log.Verbose($"{callback.FullName()}\r\n{callback.ReadAllText()}");
-                await LongRunningOperations.StartAsync(callback.Name, () =>
+                log.Debug($"Cleaning {dir.FullName()}");
+                try
                 {
-                    try
-                    {
-                        var errors = new StringBuilder();
-                        var exitCode = PowerShellCli.RunFileInConsole(
-                            $"{callback.FullName()} -slnDir {slnDir.FullName()} -artifactsDir {releaseArtifactsDir.FullName()}",
-                            output => log.Debug(output),
-                            error =>
-                            {
-                                log.Warning(error);
-                                errors.AppendLine(error);
-                            });
-
-                        if (exitCode != 0)
-                            throw new BuildException(errors.ToString(), exitCode);
-                        return Task.CompletedTask;
-                    }
-                    catch (Exception e)
-                    {
-                        throw new BuildException(e.Message, 500);
-                    }
-                }).ConfigureAwait(false);
+                    Repeat.Task(() => dir.CleanIfExists())
+                        .WithOptions(o =>
+                        {
+                            o.MaxTries = 3;
+                            o.RetryDelay = 3.Seconds();
+                        }).UntilNoExceptions();
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    //ignore
+                }
             }
-
-            return 0;
+            else
+            {
+                dir.CreateIfNotExists();
+            }
         }
 
         private string ResolveRunFlag(string runFlag)
