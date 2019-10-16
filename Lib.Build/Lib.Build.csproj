@@ -8,7 +8,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>build</ToolCommandName>
     <Description>Builds .NET solutions and produces easy to consume release artifacts</Description>
-    <Copyright>@rzmoz</Copyright>
+    <Copyright>@rzmoz 2019</Copyright>
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
