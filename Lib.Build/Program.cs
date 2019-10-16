@@ -1,36 +1,28 @@
-﻿using System;
+﻿using System.Threading.Tasks;
 using DotNet.Basics.Cli;
-using DotNet.Basics.Diagnostics;
 
 namespace Lib.Build
 {
     class Program
     {
-        static int Main(string[] args)
+        internal const string ArgsFromDiskFlag = "argsFromDisk";
+
+        static async Task<int> Main(string[] args)
         {
 #if DEBUG
             args.PauseIfDebug();
 #endif
-            try
-            {
-                var startTimestamp = DateTime.UtcNow;
-                var artifactsBuilder = new ArtifactsBuilder(args, Log.Logger);
-                artifactsBuilder.Init();
+            //init host
+            var host = new CliHostBuilder(args, switchMappings => switchMappings.AddRange(BuildArgsBuilder.KeyMappings)).Build();
 
-                artifactsBuilder.PreBuild.Run();
-                artifactsBuilder.Build.Run();
-                artifactsBuilder.PostBuild.Run();
+            //init build args
+            var argsBuilder = new BuildArgsBuilder(host, host.Log.InContext("Init"));
+            if (args.IsSet(ArgsFromDiskFlag))
+                argsBuilder = argsBuilder.WithArgsFromDisk();
+            var buildArgs = argsBuilder.Build();
 
-                var endTimestamp = DateTime.UtcNow;
-                var duration = endTimestamp - startTimestamp;
-                Log.Information($"Build completed in {duration:g}");
-                return 0;
-            }
-            catch (Exception e)
-            {
-                Log.Error($"{e.Message}\r\n{e.InnerException?.Message}", e);
-                return -1;
-            }
+            //run build
+            return await host.RunAsync($"Build {buildArgs.SolutionDir.Name}", async (config, log) => await new BuildStepDispatcher().DispatchAsync(host, buildArgs).ConfigureAwait(false)).ConfigureAwait(false);
         }
     }
 }

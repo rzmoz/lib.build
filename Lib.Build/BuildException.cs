@@ -1,24 +1,14 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using DotNet.Basics.Cli;
 
 namespace Lib.Build
 {
-    public class BuildException : Exception
+    public class BuildException : CliException
     {
-        public BuildException()
+        public BuildException(string message, int exitCode) : base(message, LogOptions.ExcludeStackTrace)
         {
+            ExitCode = exitCode;
         }
 
-        protected BuildException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-
-        public BuildException(string message) : base(message)
-        {
-        }
-
-        public BuildException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+        public int ExitCode { get; set; }
     }
 }

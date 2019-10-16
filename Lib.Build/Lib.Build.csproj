@@ -1,26 +1,26 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>build</ToolCommandName>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <Authors>rzmoz</Authors>
     <Product>Lib.Build</Product>
-    <Description>Builds Visual Studio 2017+ solutions and produces easy to consume release artifacts</Description>
-    <RepositoryUrl>https://github.com/rzmoz/lib.build</RepositoryUrl>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
-    <PackageLicenseFile></PackageLicenseFile>
-    <Copyright>@rzmoz</Copyright>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>build</ToolCommandName>
+    <Description>Builds .NET solutions and produces easy to consume release artifacts</Description>
+    <Copyright>@rzmoz 2019</Copyright>
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Company>rzmoz</Company>
+    <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rzmoz/lib.build.git</RepositoryUrl>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="DotNet.Basics" Version="9.8.4" />
-    <PackageReference Include="DotNet.Basics.Cli" Version="2.2.10" />
-    <PackageReference Include="DotNet.Basics.PowerShell" Version="6.2.2" />
+    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.5.0" />
+    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.3.4" />
+    <PackageReference Include="DotNet.Basics.SevenZip" Version="19.0.0-beta.3.1" />
+    <PackageReference Include="LibGit2Sharp" Version="0.26.1" />
   </ItemGroup>
-
 </Project>

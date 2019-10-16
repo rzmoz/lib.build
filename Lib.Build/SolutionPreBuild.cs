@@ -1,36 +1,24 @@
 ﻿using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using DotNet.Basics.Collections;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
-using DotNet.Basics.Sys;
 
 namespace Lib.Build
 {
-    public class SolutionPreBuild
+    public class SolutionPreBuild : BuildStep
     {
-        private readonly BuildArgs _args;
-        private readonly ILogDispatcher _slnLog;
-
-        public SolutionPreBuild(BuildArgs args, ILogDispatcher slnLog)
+        protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
         {
-            _args = args;
-            _slnLog = slnLog.InContext(nameof(SolutionPreBuild));
-        }
+            log.Info($"Starting {nameof(SolutionPreBuild)}");
 
-        public void Run()
-        {
-            _slnLog.Information($"Starting {nameof(SolutionPreBuild)}");
+            InitDir(args.ReleaseArtifactsDir, log);
 
-            CleanDir(_args.ArtifactsDir);
             //add csproj bin dirs 
-            var csprojBinDirs = _args.SolutionDir.EnumerateDirectories("*bin*", SearchOption.AllDirectories);
-            csprojBinDirs.ForEachParallel(CleanDir);
-        }
-
-        private void CleanDir(DirPath dir)
-        {
-            _slnLog.Debug($"Cleaning {dir.FullName()}");
-            dir.CleanIfExists();
+            var csprojBinDirs = args.SolutionDir.EnumerateDirectories("bin", SearchOption.AllDirectories).OrderByDescending(dir => dir.FullName());
+            csprojBinDirs.ForEachParallel(binDir => InitDir(binDir, log));
+            return Task.FromResult(0);
         }
     }
 }
