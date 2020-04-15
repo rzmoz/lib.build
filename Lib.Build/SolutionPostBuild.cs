@@ -15,33 +15,64 @@ namespace Lib.Build
 {
     public class SolutionPostBuild : BuildStep
     {
-        private static readonly IReadOnlyList<string> _winRunTimes = new[] { "win", "win-x64", "win10-x64" };
-        private static readonly IReadOnlyList<string> _excessiveBuildDirs = new[] { "cs", "de", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant", "Publish" };
+        private static readonly IReadOnlyList<string> _excessivePublishDirs = new[] { "cs", "de", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant", "Publish" };
 
-        protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
+        protected override Task<int> InnerRunAsync(BuildArgs args, ILogger log)
         {
             log.Info($"Starting {nameof(SolutionPostBuild)}");
-            args.ReleaseProjects.ForEachParallel(proj => CleanExcessiveCompileArtifacts(proj, args, log));
-            log.Info($"Asserting Web Jobs");
-            args.ReleaseProjects.ForEachParallel(proj => AssertWebJob(proj, args.Configuration, log));
-            log.Info($"Copying Release Artifacts");
-            args.ReleaseProjects.ForEachParallel(proj => CopyReleaseArtifacts(proj, args.ReleaseArtifactsDir, args.Configuration, log));
+            args.ReleaseProjects.ForEachParallel(proj =>
+            {
+                var artifactsSourceDir = GetArtifactsSourceDir(proj, args);
+                var artifactsTargetDir = args.ReleaseArtifactsDir.Add(proj.NameWoExtension);
 
-            if (args.Package)
-                PackageReleaseArtifacts(args, log);
+                CleanExcessiveCompileArtifacts(artifactsSourceDir, log);
+
+                if (args.IsAuxiliary)
+                    RemoveReleaseAssemblies(artifactsSourceDir, proj.NameWoExtension, log);
+
+                if (args.DllsInBinFolderRoles.Any())
+                {
+                    log.Info($"Asserting Dlls In Bin Folder Roles ");
+                    ProcessDllsInBinFolderRoles(artifactsSourceDir, args.DllsInBinFolderRoles, log);
+                }
+
+                log.Info($"Asserting Web Jobs");
+                AssertWebJob(artifactsSourceDir, proj.NameWoExtension, log);
+
+                log.Info($"Copying Release Artifacts");
+                CopyReleaseArtifacts(artifactsSourceDir, artifactsTargetDir, log);
+            });
+
+            log.Info($"Scanning for Nuget Packages");
+            args.ReleaseProjects.ForEachParallel(proj => CopyNugetPackages(proj, args.ReleaseArtifactsDir));
+
+            if (args.ZipIt)
+            {
+                log.Info($"Zipping release artifacts");
+                ZipIt(args, log);
+            }
+
             return Task.FromResult(0);
         }
-
-        private DirPath GetTargetDir(FilePath projectFile, DirPath releaseArtifactsDir)
+        
+        private void RemoveReleaseAssemblies(DirPath artifactsSourceDir, string projectName, ILogger log)
         {
-            return releaseArtifactsDir.ToDir(projectFile.NameWoExtension);
-        }
+            log.Info($"Removing Release Assemblies");
 
-        private DirPath GetArtifactsSourceDir(FilePath projectFile, string configuration)
+            artifactsSourceDir.EnumerateFiles($"{projectName}.dll", SearchOption.AllDirectories)
+                .Concat(artifactsSourceDir.EnumerateFiles($"{projectName}.pdb", SearchOption.AllDirectories))
+                .OrderBy(file => file.FullName())
+                .ForEach(file =>
+                {
+                    log.Verbose($"Removing {file.Name.Highlight()}");
+                    file.DeleteIfExists();
+                });
+        }
+        private DirPath GetArtifactsSourceDir(FilePath projectFile, BuildArgs args)
         {
             var sourceDir = projectFile.Directory().ToDir("bin");
-            if (sourceDir.Add(configuration).Exists())
-                sourceDir = sourceDir.Add(configuration);
+            if (sourceDir.Add(args.Configuration).Exists())
+                sourceDir = sourceDir.Add(args.Configuration);
             try
             {
                 sourceDir = sourceDir.EnumerateDirectories().SingleOrDefault() ?? sourceDir;//look for target framework dir
@@ -51,97 +82,38 @@ namespace Lib.Build
                 //ignore if there's more than a single file.
             }
 
+            if (args.Publish)
+                sourceDir = sourceDir.Add(args.Runtime, nameof(args.Publish));
             return sourceDir;
         }
 
-        private void CleanExcessiveCompileArtifacts(FilePath projectFile, BuildArgs args, ILogDispatcher log)
+        private void CleanExcessiveCompileArtifacts(DirPath artifactsSourceDir, ILogger log)
         {
-            var outputDir = GetArtifactsSourceDir(projectFile, args.Configuration);
-            _excessiveBuildDirs.ForEachParallel(dir =>
+            _excessivePublishDirs.ForEachParallel(dir =>
             {
-                var excessiveDir = outputDir.Add(dir);
+                var excessiveDir = artifactsSourceDir.Add(dir);
                 log.Verbose($"Cleaning excessive build output dir: {excessiveDir.FullName()}");
                 return excessiveDir.DeleteIfExists();
             });
         }
 
-        private void PackageReleaseArtifacts(BuildArgs args, ILogDispatcher log)
+        private void CopyReleaseArtifacts(DirPath artifactsSourceDir, DirPath artifactsTargetDir, ILogger log)
         {
-            log.Info($"{nameof(args.Package)} is set. Packing release artifacts from {args.ReleaseArtifactsDir}");
-
-            //scan for nuget packages
-            args.ReleaseProjects.Select(proj => proj.Directory.Add("bin").EnumerateDirectories()).SelectMany(dir => dir).ForEachParallel(dir =>
-              {
-                  log.Verbose($"Looking for nuget packages in {dir}");
-                  dir.EnumerateFiles("*.nupkg", SearchOption.AllDirectories).ForEachParallel(nuget =>
-                  {
-                      log.Debug($"Nuget found: {nuget.FullName()}");
-                      nuget.CopyTo(args.ReleaseArtifactsDir);
-                  });
-              });
-
-            var sevenZip = new SevenZipExe(log.Debug, log.Error, log.Verbose);
-
-            args.ReleaseArtifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
-            {
-                //cleanup runtime dirs - windows only support
-                var runTimesDir = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
-                runTimesDir?.EnumerateDirectories().ForEachParallel(runtimeDir =>
-                {
-                    if (_winRunTimes.Contains(runtimeDir.Name, StringComparer.InvariantCultureIgnoreCase))
-                        return;
-                    runtimeDir.DeleteIfExists();
-                });
-
-                var modulePath = args.ReleaseArtifactsDir.ToFile($"{moduleDir.Name}_{args.Version.SemVer20String}");
-
-                log.Debug($"Package name resolved to: {modulePath}");
-                sevenZip.Create7zFromDirectory(moduleDir.FullName(), modulePath.FullName());
-                if (runTimesDir == null)
-                    return;
-
-                var outputSize = new FileInfo($"{modulePath}.7z").Length;
-
-                if (outputSize <= 0)
-                    throw new CliException($"{modulePath} not found. This should never happen. Has the file been deleted?", LogOptions.ExcludeStackTrace);
-
-                if (outputSize < 10000000)//only create separate tool and runtimes packages when package is more than 10MB (secure file max size on Azure DevOps)
-                    return;
-
-                log.Debug($"{modulePath.Name} is larger than 10MB. Splitting runtimes and tool into separate packages");
-                
-                sevenZip.Create7zFromDirectory(runTimesDir.FullName(), $"{modulePath.FullName()}_Runtimes");
-                runTimesDir.DeleteIfExists();
-                sevenZip.Create7zFromDirectory(moduleDir.FullName(), $"{modulePath.FullName()}_Tool");
-            });
-        }
-
-
-        private void CopyReleaseArtifacts(FilePath projectFile, DirPath targetOutputRootDir, string buildConfiguration, ILogDispatcher log)
-        {
-            var releaseTargetDir = GetTargetDir(projectFile, targetOutputRootDir);
-
-            log.Debug($"Copying RELEASE artifacts for {releaseTargetDir.Name.Highlight()} to {releaseTargetDir.FullName()}");
-
-            var artifactsSourceDir = GetArtifactsSourceDir(projectFile, buildConfiguration);
+            log.Debug($"Copying RELEASE artifacts for {artifactsTargetDir.Name.Highlight()} from {artifactsSourceDir.FullName()} to {artifactsTargetDir.FullName().Highlight()}");
 
             try
             {
-                artifactsSourceDir.CopyTo(releaseTargetDir, true);
+                artifactsSourceDir.CopyTo(artifactsTargetDir, true);
             }
             catch (Exception e)
             {
-                throw new BuildException($"Copy BUILD artifacts for {projectFile.Name} failed with {e.Message}", 500);
+                throw new CliException($"Copy BUILD artifacts for {artifactsTargetDir.NameWoExtension} failed with {e.Message}");
             }
         }
 
-        private void AssertWebJob(FilePath projectFile, string buildConfiguration, ILogDispatcher log)
+        private void AssertWebJob(DirPath artifactsSourceDir, string projectName, ILogger log)
         {
-            var outputDir = GetArtifactsSourceDir(projectFile, buildConfiguration);
-            var projectName = projectFile.NameWoExtension;
-
-
-            var appSettingsFile = outputDir.ToFile("appSettings.json");
+            var appSettingsFile = artifactsSourceDir.ToFile("appSettings.json");
 
             if (appSettingsFile.Exists() == false)
             {
@@ -163,10 +135,69 @@ namespace Lib.Build
 
             using var tempDir = new TempDir();
             //move content to temp dir since we're copying to sub path of origin
-            outputDir.CopyTo(tempDir.Root, true);
-            outputDir.CleanIfExists();
-            var webJobTargetDir = outputDir.Add("app_data", "jobs", webJobType, projectName);
+            artifactsSourceDir.CopyTo(tempDir.Root, true);
+            artifactsSourceDir.CleanIfExists();
+            var webJobTargetDir = artifactsSourceDir.Add("app_data", "jobs", webJobType, projectName);
             tempDir.Root.CopyTo(webJobTargetDir, true);
+        }
+
+        private void ProcessDllsInBinFolderRoles(DirPath artifactsSourceDir, IReadOnlyList<string> dllsInBinFolderRoles, ILogger log)
+        {
+            artifactsSourceDir.EnumerateDirectories().ForEachParallel(dir =>
+            {
+                var roleCandidate = dir.Name.Substring(dir.Name.LastIndexOf(".", StringComparison.Ordinal) + 1);
+                if (dllsInBinFolderRoles.Contains(roleCandidate, StringComparer.InvariantCultureIgnoreCase))
+                {
+                    log.Debug($"Moving dlls to bin folder for {dir.Name.Highlight()}.");
+                    var binDir = dir.Add("bin").CreateIfNotExists();
+                    dir.EnumerateFiles("*.dll").ForEachParallel(dll => dll.MoveTo(binDir));
+                    dir.EnumerateFiles("*.pdb").ForEachParallel(pdb => pdb.MoveTo(binDir));
+                }
+            });
+        }
+
+        private void CopyNugetPackages(FilePath projectFile, DirPath releaseArtifactsDir)
+        {
+            try
+            {
+                projectFile.Directory.Add("bin").EnumerateFiles("*.nupkg", SearchOption.AllDirectories)
+                    .ForEachParallel(nuget => nuget.CopyTo(releaseArtifactsDir));
+
+            }
+            catch (Exception e)
+            {
+                throw new CliException($"Copy Nuget packages for {projectFile.Name} failed with {e.Message}");
+            }
+        }
+
+        private void ZipIt(BuildArgs args, ILogger log)
+        {
+            var sevenZip = new SevenZipExe(log.Debug, log.Error, log.Verbose);
+
+            args.ReleaseArtifactsDir.EnumerateDirectories().ForEachParallel(moduleDir =>
+            {
+                var runTimesDir = moduleDir.EnumerateDirectories("runtimes").SingleOrDefault();
+                var modulePath = args.ReleaseArtifactsDir.ToFile($"{moduleDir.Name}_{args.Version.SemVer20String}");
+
+                log.Debug($"Archive name resolved to: {modulePath}");
+                sevenZip.Create7zFromDirectory(moduleDir.FullName(), modulePath.FullName());
+                if (runTimesDir == null)
+                    return;
+
+                var outputSize = new FileInfo($"{modulePath}.7z").Length;
+
+                if (outputSize <= 0)
+                    throw new CliException($"{modulePath} not found. This should never happen. Has the file been deleted?");
+
+                if (outputSize < 10000000)//only create separate tool and runtimes packages when package is more than 10MB (secure file max size on Azure DevOps)
+                    return;
+
+                log.Debug($"{modulePath.Name} is larger than 10MB. Splitting runtimes and tool into separate packages");
+
+                sevenZip.Create7zFromDirectory(runTimesDir.FullName(), $"{modulePath.FullName()}_Runtimes");
+                runTimesDir.DeleteIfExists();
+                sevenZip.Create7zFromDirectory(moduleDir.FullName(), $"{modulePath.FullName()}_Tool");
+            });
         }
     }
 }

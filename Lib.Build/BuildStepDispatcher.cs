@@ -15,15 +15,14 @@ namespace Lib.Build
             //order matters!
             new SolutionPreBuild(),
             new SolutionBuild(),
-            new SolutionTest(),
             new SolutionPostBuild()
         };
 
         internal const string RunOnlyFlag = "runOnly";
 
-        public async Task<int> DispatchAsync(CliHost host, BuildArgs args)
+        public async Task<int> DispatchAsync(CliHost<BuildArgs> host, BuildArgs args)
         {
-            var stepsToRun = (host.Args.ToArray().IsSet(RunOnlyFlag)
+            var stepsToRun = (host.IsSet(RunOnlyFlag)
                 ? host[RunOnlyFlag].Split('|', StringSplitOptions.RemoveEmptyEntries)
                 : _steps.Select(step => step.Flag)).ToList();
 
@@ -35,7 +34,7 @@ namespace Lib.Build
             return 0;
         }
 
-        public async Task<int> TryDispatchAsync(BuildStep step, IEnumerable<string> stepsToRun, CliHost host, BuildArgs args)
+        public async Task<int> TryDispatchAsync(BuildStep step, IEnumerable<string> stepsToRun, CliHost<BuildArgs> host, BuildArgs args)
         {
             if (!ShouldRun(step.Flag, stepsToRun))
                 return 0;
@@ -43,7 +42,7 @@ namespace Lib.Build
             host.Log.Info(GetBuildStart(step.Flag, args.SolutionDir.Name));
             var exitCode = await step.RunAsync(args, host.Log).ConfigureAwait(false);
             if (exitCode != 0)
-                throw new BuildException($"{step.Flag} FAILED. See log for details", exitCode);
+                throw new CliException($"{step.Flag} FAILED. See log for details", exitCode);
 
             return exitCode;
         }
@@ -54,12 +53,11 @@ namespace Lib.Build
             return stepsToRun.Any(step => step.Equals(flag, StringComparison.OrdinalIgnoreCase));
         }
 
-        private string GetBuildStart(string step, string name) => $@"
-*************************************************************************************
+        private string GetBuildStart(string step, string name) => $@"*************************************************************************************
 
                         Starting {step.Highlight()} for {name}
                 
-*************************************************************************************
+    *************************************************************************************
 ";
     }
 }

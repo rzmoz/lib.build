@@ -16,13 +16,13 @@ namespace Lib.Build
 
         public string Flag { get; }
 
-        public virtual Task<int> RunAsync(BuildArgs args, ILogDispatcher log)
+        public virtual Task<int> RunAsync(BuildArgs args, ILogger log)
         {
             return InnerRunAsync(args, log?.InContext(Flag));
         }
-        protected abstract Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log);
+        protected abstract Task<int> InnerRunAsync(BuildArgs args, ILogger log);
 
-        protected void InitDir(DirPath dir, ILogDispatcher log)
+        protected void InitDir(DirPath dir, ILogger log)
         {
             if (dir.Exists())
             {

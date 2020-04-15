@@ -2,25 +2,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <Authors>rzmoz</Authors>
     <Product>Lib.Build</Product>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>build</ToolCommandName>
     <Description>Builds .NET solutions and produces easy to consume release artifacts</Description>
-    <Copyright>@rzmoz 2019</Copyright>
+    <Copyright>@rzmoz 2020</Copyright>
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://www.nuget.org/packages/Lib.Build/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rzmoz/lib.build</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Company>rzmoz</Company>
-    <PackageProjectUrl>https://github.com/rzmoz/lib.build</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/rzmoz/lib.build.git</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DotNet.Basics" Version="10.0.0-beta.5.0" />
-    <PackageReference Include="DotNet.Basics.Cli" Version="10.0.0-beta.3.4" />
-    <PackageReference Include="DotNet.Basics.SevenZip" Version="19.0.0-beta.3.1" />
-    <PackageReference Include="LibGit2Sharp" Version="0.26.1" />
+    <PackageReference Include="DotNet.Basics" Version="10.4.6" />
+    <PackageReference Include="DotNet.Basics.Cli" Version="10.4.2" />
+    <PackageReference Include="DotNet.Basics.SevenZip" Version="19.0.3" />
+    <PackageReference Include="LibGit2Sharp" Version="0.26.2" />
   </ItemGroup>
 </Project>

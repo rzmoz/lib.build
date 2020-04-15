@@ -1,10 +1,7 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
-using System.Xml.XPath;
-using DotNet.Basics.Collections;
+using DotNet.Basics.Cli;
 using DotNet.Basics.Diagnostics;
 using DotNet.Basics.IO;
 using DotNet.Basics.Sys;
@@ -13,88 +10,30 @@ namespace Lib.Build
 {
     public class SolutionBuild : BuildStep
     {
-        private const string _tempFileSuffix = ".temp";
-
-        protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
+        protected override Task<int> InnerRunAsync(BuildArgs args, ILogger log)
         {
             log.Info($"Starting {nameof(SolutionBuild)}");
+            var dotnetAction = args.Publish ? "Publish" : "Build";
 
-            try
+            foreach (var project in args.ReleaseProjects)
             {
-                if (args.Package)
-                    args.ReleaseProjects.ForEachParallel(csproj => PatchVersion(csproj, args.Version, log));
+                var actionBlock = $"{dotnetAction.ToLowerInvariant()} \"{project.FullName()}\" --configuration {args.Configuration} --verbosity quiet /p:Version={args.Version.SemVer20String}";
 
-                log.Verbose($"Looking for Solution files in {args.SolutionDir}");
-                var solutionFiles = args.SolutionDir.EnumerateFiles("*.sln").ToList();
-                log.Debug($"Solution Found: {solutionFiles.Select(sln => sln.Name).JoinString().Highlight()}");
+                if (args.Publish)
+                    actionBlock += $" --runtime {args.Runtime}";
+                else
+                    actionBlock += $" --no-incremental";
 
-                foreach (var solutionFile in solutionFiles)
-                {
-                    var buildAction = $" build \"{solutionFile.FullName()}\" --configuration {args.Configuration} --no-incremental --verbosity quiet";
-                    log.Info(buildAction.Highlight());
-                    var exitCode = ExternalProcess.Run("dotnet", buildAction, log.Debug, log.Error);
-                    if (exitCode != 0)
-                        throw new BuildException($"Build failed for {solutionFile.FullName()}. See logs for details", 400);
-                }
 
-                return Task.FromResult(0);
+                log.Info($"{dotnetAction}ing {project.NameWoExtension.Highlight()}");
+
+                log.Info(actionBlock.Highlight());
+                var exitCode = ExternalProcess.Run("dotnet", actionBlock, log.Debug, log.Error);
+                if (exitCode != 0)
+                    throw new CliException($"{dotnetAction} failed for {project.NameWoExtension.Highlight()}. See logs for details", 400);
             }
-            finally
-            {
-                if (args.Package)
-                    args.ReleaseProjects.ForEachParallel(csproj => RevertVersion(csproj, log));
-            }
-        }
 
-        private void PatchVersion(FilePath projectFile, SemVersion version, ILogDispatcher log)
-        {
-            var tmpFile = GetTempFilePath(projectFile);
-            log.Verbose($"Backing up {projectFile.FullName()} to {tmpFile.FullName()}");
-            projectFile.CopyTo(tmpFile, overwrite: true);
-
-            var projectXml = projectFile.ReadAllText();
-            var projectXDoc = XDocument.Parse(projectXml);
-            var propertyGroupElement = projectXDoc.Root.XPathSelectElement("//Project/PropertyGroup");
-            if (propertyGroupElement == null)
-                throw new BuildException($"Failed to update version for {projectFile.FullName()}. Csproj file format seems to be wrong", 400);
-
-            EnsureNodeWithValue(propertyGroupElement, "Version", version.SemVer20String);
-            EnsureNodeWithValue(propertyGroupElement, "AssemblyVersion", version.FileVerString);
-            EnsureNodeWithValue(propertyGroupElement, "FileVersion", version.FileVerString);
-            log.Debug($"Patching {projectFile.Name.Highlight()} with version {version.SemVer20String.Highlight()}");
-            using (var writer = new StreamWriter(projectFile.FullName()))
-            using (var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true }))
-            {
-                projectXDoc.Save(xmlWriter);
-            }
-        }
-
-        private static void EnsureNodeWithValue(XElement parentNode, string nodeName, string value)
-        {
-            var node = parentNode.XPathSelectElement($"//{nodeName}");
-            if (node == null)
-                parentNode.Add(new XElement(nodeName, value));
-            else
-                node.Value = value;
-        }
-
-        private void RevertVersion(FilePath projectFile, ILogDispatcher log)
-        {
-            var tmpFile = GetTempFilePath(projectFile);
-            if (tmpFile.Exists() == false)
-            {
-                log.Debug($"{tmpFile.FullName()} not found.");
-            }
-            else
-            {
-                log.Debug($"Reverting {tmpFile.FullName()} to {projectFile.FullName()}");
-                tmpFile.MoveTo(projectFile, overwrite: true, ensureTargetDir: false);
-            }
-        }
-
-        private static FilePath GetTempFilePath(FilePath projectFile)
-        {
-            return (projectFile.FullName() + _tempFileSuffix).ToFile();
+            return Task.FromResult(0);
         }
     }
 }

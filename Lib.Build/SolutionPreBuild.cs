@@ -9,7 +9,7 @@ namespace Lib.Build
 {
     public class SolutionPreBuild : BuildStep
     {
-        protected override Task<int> InnerRunAsync(BuildArgs args, ILogDispatcher log)
+        protected override Task<int> InnerRunAsync(BuildArgs args, ILogger log)
         {
             log.Info($"Starting {nameof(SolutionPreBuild)}");
 
